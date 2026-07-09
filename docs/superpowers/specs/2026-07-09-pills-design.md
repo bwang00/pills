@@ -15,28 +15,29 @@ Pills 是一个 Web 应用，为焦虑发作的用户提供即时引导帮助其
 - **后端**: FastAPI（Python），提供 RESTful API + WebSocket
 - **前端**: React + Vite，组件化开发，动画使用 CSS keyframes + framer-motion
 - **AI 层**: 阿里云千问 API，后端封装统一接口，提供动态引导内容生成
-- **数据层**: 第一阶段使用 JSON 配置文件管理引导内容，无需数据库；第二阶段按需引入 SQLite 存储用户记录
-- **部署**: 前端 build 后由 FastAPI serve 静态文件
+- **数据层**: Supabase（PostgreSQL），第一阶段用于存储引导内容和用户会话记录
+- **部署**: Vercel 自动部署（push to main 触发），后端为 Vercel Serverless Functions，前端为 Vite SPA
+- **环境配置**: 与 fundTracking 项目保持一致的 Supabase 配置模式
 
 ### 目录结构
 
 ```
 pills/
-├── backend/
-│   ├── app/
-│   │   ├── main.py           # FastAPI 入口
-│   │   ├── api/              # API 路由
-│   │   ├── guides/           # 引导内容 JSON 配置
-│   │   └── ai/               # 千问 API 封装
-│   └── requirements.txt
+├── api/                    # Vercel Serverless Functions (FastAPI)
+│   ├── guides.py
+│   └── ai.py
 ├── frontend/
 │   ├── src/
-│   │   ├── components/       # 呼吸圈、引导卡片等组件
-│   │   ├── pages/            # 首页、引导页、AI对话页
+│   │   ├── components/     # 呼吸圈、引导卡片等组件
+│   │   ├── pages/          # 首页、引导页、AI对话页
 │   │   └── App.jsx
 │   ├── package.json
 │   └── vite.config.js
+├── supabase/               # Supabase migrations 和 seed
+│   └── migrations/
 ├── tests/
+├── vercel.json
+├── .env.example
 └── README.md
 ```
 
@@ -90,7 +91,32 @@ pills/
 
 - **前端**: API 请求失败时显示温和提示（非红色报错），自动重试一次
 - **后端**: 千问 API 超时或不可用时 fallback 到预设引导内容，不影响核心功能
-- **离线兜底**: 所有引导内容本地 JSON 兜底，断网也能正常使用呼吸和着陆功能
+- **数据库**: Supabase 连接异常时，前端内置默认引导内容可离线使用
+
+## 环境变量
+
+参照 fundTracking 项目的配置模式，`.env.example` 包含：
+
+```
+# --- Supabase ---
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+SUPABASE_ANON_KEY=your-anon-key-here
+
+# --- Frontend (Vite) ---
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+
+# --- AI ---
+QWEN_API_KEY=your-qwen-api-key-here
+```
+
+## 部署
+
+- **Vercel**: 绑定 GitHub 仓库，push to main 自动部署
+- **vercel.json**: 配置前端 build 命令和后端 serverless functions
+- **Supabase**: 通过 Supabase CLI 管理数据库 migration
+- **环境密钥**: 在 Vercel Dashboard 配置，与 fundTracking 共享同一个 Supabase 项目或使用独立项目
 
 ## 测试
 
