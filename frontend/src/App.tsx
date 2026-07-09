@@ -1,7 +1,16 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import BreathingPage from './pages/BreathingPage';
+import GroundingPage from './pages/GroundingPage';
+
 export default function App() {
   return (
-    <div className="min-h-screen bg-calm-50 flex items-center justify-center">
-      <h1 className="text-3xl font-bold text-calm-800">Pills</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/guide/breathing-:type" element={<BreathingPage />} />
+        <Route path="/guide/grounding-:type" element={<GroundingPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
