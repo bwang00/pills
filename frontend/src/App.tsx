@@ -6,6 +6,7 @@ import GroundingPage from './pages/GroundingPage';
 import MuscleRelaxPage from './pages/MuscleRelaxPage';
 import MindfulnessPage from './pages/MindfulnessPage';
 import AIChatPage from './pages/AIChatPage';
+import DebugPage from './pages/DebugPage';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/guide/muscle-relax-*" element={<MuscleRelaxPage />} />
           <Route path="/guide/mindfulness-*" element={<MindfulnessPage />} />
           <Route path="/ai-chat" element={<AIChatPage />} />
+          <Route path="/debug" element={<DebugPage />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
