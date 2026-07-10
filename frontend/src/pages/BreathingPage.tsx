@@ -27,7 +27,7 @@ export default function BreathingPage() {
       if (g) setGuide(g);
     }).catch(() => {
       setGuide({ id: 'fallback', slug, title: '呼吸引导', description: '', category: 'breathing',
-        config: { phases: [{ name: '吸气', duration: 4 }, { name: '屏息', duration: 7 }, { name: '呼气', duration: 8 }] }, sort_order: 0 });
+        config: { phases: [{ name: '吸气', duration: 4 }, { name: '屏息', duration: 8 }, { name: '呼气', duration: 8 }] }, sort_order: 0 });
     });
   }, [slug]);
 
