@@ -17,6 +17,14 @@ const BG_MUSIC_VOL = 0.25;
 const PROMPT_BASE_URL = '/audio/prompts/';
 const PROMPT_VOL = 0.8;
 
+const VOICE_FILES: Record<string, string> = {
+  inhale:  '/audio/voice-inhale.mp3',
+  hold:    '/audio/voice-hold.mp3',
+  exhale:  '/audio/voice-exhale.mp3',
+  start:   '/audio/voice-start.mp3',
+  finish:  '/audio/voice-finish.mp3',
+};
+
 export function useAudio() {
   const ctxRef = useRef<AudioContext | null>(null);
   const bufferCache = useRef<Map<string, AudioBuffer>>(new Map());
@@ -163,9 +171,47 @@ export function useAudio() {
     }
   }, [getCtx, loadBuffer]);
 
+  const playVoice = useCallback(async (voice: string) => {
+    const url = VOICE_FILES[voice];
+    if (!url) return;
+    try {
+      const ctx = await getCtx();
+
+      // Stop any currently playing prompt voice
+      if (promptSourceRef.current) {
+        try { promptSourceRef.current.stop(); } catch {}
+        promptSourceRef.current = null;
+      }
+
+      const buffer = await loadBuffer(ctx, url);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(PROMPT_VOL, ctx.currentTime);
+
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(ctx.currentTime);
+      promptSourceRef.current = source;
+
+      // Duck bg music while voice plays, then restore
+      if (bgGainRef.current && ctxRef.current) {
+        const now = ctxRef.current.currentTime;
+        bgGainRef.current.gain.cancelScheduledValues(now);
+        bgGainRef.current.gain.setValueAtTime(bgGainRef.current.gain.value, now);
+        bgGainRef.current.gain.linearRampToValueAtTime(0.08, now + 0.3);
+        const restoreTime = now + buffer.duration + 0.3;
+        bgGainRef.current.gain.linearRampToValueAtTime(BG_MUSIC_VOL, restoreTime);
+      }
+    } catch (e) {
+      console.warn('[Audio] playVoice failed:', voice, e);
+    }
+  }, [getCtx, loadBuffer]);
+
   const unlockAudio = useCallback(async () => {
     await getCtx();
   }, [getCtx]);
 
-  return { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic, playPromptAudio };
+  return { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic, playPromptAudio, playVoice };
 }

@@ -16,7 +16,7 @@ export default function BreathingPage() {
 
   const phases = (guide?.config as BreathingConfig)?.phases || [];
   const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop, finish } = useBreathing(phases);
-  const { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic } = useAudio();
+  const { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic, playVoice } = useAudio();
   const prevPhaseRef = useRef(-1);
 
   useEffect(() => {
@@ -35,12 +35,12 @@ export default function BreathingPage() {
     if (currentPhaseIndex !== prevPhaseRef.current) {
       prevPhaseRef.current = currentPhaseIndex;
       const name = phases[currentPhaseIndex]?.name || '';
-      if (name === '吸气') playTone('inhale');
-      else if (name === '闭气') playTone('hold');
-      else if (name === '呼气') playTone('exhale');
+      if (name === '吸气') { playTone('inhale'); playVoice('inhale'); }
+      else if (name === '闭气') { playTone('hold'); playVoice('hold'); }
+      else if (name === '呼气') { playTone('exhale'); playVoice('exhale'); }
       else playTone('transition');
     }
-  }, [currentPhaseIndex, state, soundOn, phases, playTone]);
+  }, [currentPhaseIndex, state, soundOn, phases, playTone, playVoice]);
 
   const handleStart = async () => {
     await unlockAudio();
@@ -50,6 +50,7 @@ export default function BreathingPage() {
     } catch {}
     if (soundOn) startBgMusic();
     playBell();
+    if (soundOn) playVoice('start');
     start();
   };
 
@@ -60,9 +61,9 @@ export default function BreathingPage() {
       const durationSecs = (currentRound - 1) * cycleDuration;
       fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed_at: new Date().toISOString(), duration_seconds: durationSecs }) }).catch(() => {});
-      if (soundOn) playBell();
+      if (soundOn) { playBell(); playVoice('finish'); }
     }
-  }, [state, sessionId, currentRound, phases, soundOn, playBell, stopBgMusic]);
+  }, [state, sessionId, currentRound, phases, soundOn, playBell, playVoice, stopBgMusic]);
 
   // Stop bg music when exercise is stopped (back to idle)
   useEffect(() => {
