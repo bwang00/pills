@@ -17,7 +17,7 @@ export default function BreathingPage() {
   const phases = (guide?.config as BreathingConfig)?.phases || [];
   const totalRounds = 4;
   const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop } = useBreathing(phases, totalRounds);
-  const { playTone, playBell } = useAudio();
+  const { playTone, playBell, unlockAudio } = useAudio();
   const prevPhaseRef = useRef(-1);
 
   useEffect(() => {
@@ -44,6 +44,7 @@ export default function BreathingPage() {
   }, [currentPhaseIndex, state, soundOn, phases, playTone]);
 
   const handleStart = async () => {
+    await unlockAudio();
     try {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);

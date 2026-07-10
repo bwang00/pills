@@ -27,27 +27,32 @@ export function useAudio() {
     return ctxRef.current;
   }, []);
 
-  const playTone = useCallback(async (tone: ToneType, volume = 0.15) => {
+  const playTone = useCallback(async (tone: ToneType, volume = 0.35) => {
     try {
       const ctx = await getCtx();
       const { freq, duration, type } = TONE_MAP[tone];
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = type;
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      const now = ctx.currentTime;
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(volume, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + duration);
-    } catch {
-      // Audio not available
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {
+      console.warn('[Audio] playTone failed:', e);
     }
   }, [getCtx]);
 
-  const playBell = useCallback(() => { playTone('bell', 0.12); }, [playTone]);
+  const playBell = useCallback(() => playTone('bell', 0.25), [playTone]);
 
-  return { playTone, playBell };
+  const unlockAudio = useCallback(async () => {
+    await getCtx();
+  }, [getCtx]);
+
+  return { playTone, playBell, unlockAudio };
 }

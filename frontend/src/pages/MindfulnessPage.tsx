@@ -13,7 +13,7 @@ export default function MindfulnessPage() {
   const [guide, setGuide] = useState<Guide | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
-  const { playBell } = useAudio();
+  const { playBell, unlockAudio } = useAudio();
 
   const config = guide ? (guide.config as MindfulnessConfig) : { duration_minutes: 5, prompts: [] };
   const { state, elapsed, totalSeconds, currentPrompt, promptOpacity, start, stop } = useMeditation(config.duration_minutes || 5, config.prompts || []);
@@ -30,6 +30,7 @@ export default function MindfulnessPage() {
   }, [slug]);
 
   const handleStart = async () => {
+    await unlockAudio();
     setShowIntro(false);
     try {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });

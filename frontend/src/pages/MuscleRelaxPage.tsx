@@ -32,7 +32,7 @@ export default function MuscleRelaxPage() {
 
   const steps = (guide?.config as MuscleRelaxConfig)?.steps || [];
   const { state, currentStepIndex, phase, timeRemaining, progress, start, stop } = useMuscleRelax(steps);
-  const { playBell } = useAudio();
+  const { playBell, unlockAudio } = useAudio();
   const currentStep = steps[currentStepIndex];
 
   useEffect(() => {
@@ -47,6 +47,7 @@ export default function MuscleRelaxPage() {
   }, [slug]);
 
   const handleStart = async () => {
+    await unlockAudio();
     setShowIntro(false);
     try {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });

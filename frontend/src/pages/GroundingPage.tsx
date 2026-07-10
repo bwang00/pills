@@ -19,7 +19,7 @@ export default function GroundingPage() {
 
   const steps = (guide?.config as GroundingConfig)?.steps || [];
   const { state, currentStepIndex, entryCount, notes, currentInput, start, setInput, addEntry, skipStep, stop } = useGrounding(steps);
-  const { playBell } = useAudio();
+  const { playBell, unlockAudio } = useAudio();
 
   useEffect(() => {
     if (!slug) return;
@@ -39,6 +39,7 @@ export default function GroundingPage() {
   }, [slug]);
 
   const handleStart = async () => {
+    await unlockAudio();
     try {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);
