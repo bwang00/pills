@@ -132,8 +132,10 @@ export default function GroundingPage() {
             ))}
           </div>
         )}
-        <button onClick={finish} className="mt-6 w-full text-center text-calm-400 text-sm">结束引导</button>
-        <AICoach guideType="grounding" currentPhase={currentStep?.sense || ''} triggerKey={currentStepIndex} enabled={true} />
+        <div className="mt-6 flex justify-center">
+          <button onClick={finish} className="rounded-full border border-calm-300 text-calm-600 px-8 py-3">结束练习</button>
+        </div>
+        <AICoach guideType="grounding" currentPhase={currentStep?.sense || ''} triggerKey={currentStepIndex} enabled={true} voiceOn={false} />
       </Layout>
     );
   }

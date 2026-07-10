@@ -126,7 +126,7 @@ export default function MindfulnessPage() {
           <div className="max-w-xs mx-auto mb-4">
             <StepTimer label="冥想中" running={true} targetSeconds={totalSeconds} />
           </div>
-          <button onClick={stop} className="text-calm-400 text-sm">结束冥想</button>
+          <button onClick={() => { stopBgMusic(); stop(); }} className="rounded-full border border-calm-300 text-calm-600 px-8 py-3">结束冥想</button>
         </div>
       )}
 
@@ -141,7 +141,7 @@ export default function MindfulnessPage() {
         </div>
       )}
 
-      <AICoach guideType="mindfulness" currentPhase="meditating" triggerKey={Math.floor(elapsed / 30)} enabled={state === 'running'} />
+      <AICoach guideType="mindfulness" currentPhase="meditating" triggerKey={Math.floor(elapsed / 30)} enabled={state === 'running'} voiceOn={false} />
     </Layout>
   );
 }

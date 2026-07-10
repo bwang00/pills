@@ -171,7 +171,7 @@ export default function BreathingPage() {
             <button onClick={() => { stopBgMusic(); finish(); }} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">结束</button>
           </div>
         </div>
-        <AICoach guideType="breathing" currentPhase={phaseName} triggerKey={currentRound} enabled={true} />
+        <AICoach guideType="breathing" currentPhase={phaseName} triggerKey={currentRound} enabled={true} voiceOn={false} />
       </Layout>
     );
   }

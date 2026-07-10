@@ -147,7 +147,9 @@ export default function MuscleRelaxPage() {
               }`} />
             ))}
           </div>
-          <button onClick={stop} className="text-calm-400 text-sm">结束练习</button>
+          <div className="flex justify-center">
+            <button onClick={stop} className="rounded-full border border-calm-300 text-calm-600 px-8 py-3">结束练习</button>
+          </div>
         </div>
       )}
 
@@ -162,7 +164,7 @@ export default function MuscleRelaxPage() {
         </div>
       )}
 
-      <AICoach guideType="muscle_relax" currentPhase={currentStep?.body_part || ''} triggerKey={currentStepIndex} enabled={state === 'running'} />
+      <AICoach guideType="muscle_relax" currentPhase={currentStep?.body_part || ''} triggerKey={currentStepIndex} enabled={state === 'running'} voiceOn={false} />
     </Layout>
   );
 }
