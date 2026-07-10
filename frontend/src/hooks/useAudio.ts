@@ -63,7 +63,7 @@ export function useAudio() {
 
   const playBell = useCallback(() => playTone('bell', 0.5), [playTone]);
 
-  const startBgMusic = useCallback(async () => {
+  const startBgMusic = useCallback(async (url?: string) => {
     try {
       const ctx = await getCtx();
       // Stop any existing bg music
@@ -72,7 +72,7 @@ export function useAudio() {
         bgSourceRef.current = null;
       }
 
-      const buffer = await loadBuffer(ctx, BG_MUSIC_URL);
+      const buffer = await loadBuffer(ctx, url || BG_MUSIC_URL);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.loop = true;

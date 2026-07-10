@@ -36,7 +36,7 @@ export default function MindfulnessPage() {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);
     } catch {}
-    startBgMusic();
+    startBgMusic('/audio/ambient-meditation.wav');
     playBell();
     start();
   };
