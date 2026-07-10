@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface AICoachProps {
   guideType: string;
@@ -40,7 +39,6 @@ export default function AICoach({ guideType, currentPhase = '', triggerKey, enab
         const id = ++msgIdRef.current;
         setMessages((prev) => [...prev.slice(-2), { text: data.suggestion, id }]);
         setFaceIndex((i) => (i + 1) % COACH_FACES.length);
-        // Auto dismiss after 6s
         setTimeout(() => {
           setMessages((prev) => prev.filter((m) => m.id !== id));
         }, 6000);
@@ -52,7 +50,6 @@ export default function AICoach({ guideType, currentPhase = '', triggerKey, enab
     }
   }, [guideType, currentPhase, enabled]);
 
-  // Trigger on key change or periodically
   useEffect(() => {
     const key = `${triggerKey ?? ''}-${currentPhase}`;
     if (key === lastTriggerRef.current || !enabled) return;
@@ -60,7 +57,6 @@ export default function AICoach({ guideType, currentPhase = '', triggerKey, enab
     fetchTip();
   }, [triggerKey, currentPhase, fetchTip, enabled]);
 
-  // Periodic tips every 30s
   useEffect(() => {
     if (!enabled) return;
     const timer = setInterval(fetchTip, 30000);
@@ -70,49 +66,24 @@ export default function AICoach({ guideType, currentPhase = '', triggerKey, enab
   if (!enabled) return null;
 
   return (
-    <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-50 pointer-events-none">
-      <AnimatePresence>
-        {messages.map((msg) => (
-          <motion.div
-            key={msg.id}
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.9 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="mb-2 pointer-events-auto"
-          >
-            <div className="flex items-start gap-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg px-4 py-3 border border-calm-100">
-              <motion.span
-                className="text-2xl flex-shrink-0 mt-0.5"
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                {COACH_FACES[faceIndex]}
-              </motion.span>
-              <p className="text-sm text-calm-700 leading-relaxed">{msg.text}</p>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      {isThinking && messages.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-md px-4 py-3 border border-calm-100 w-fit"
-        >
-          <span className="text-xl">🧘</span>
-          <div className="flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <motion.span
-                key={i}
-                className="w-1.5 h-1.5 rounded-full bg-calm-400"
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 0.6, delay: i * 0.15, repeat: Infinity }}
-              />
-            ))}
+    <div style={{ position: 'fixed', bottom: 24, left: 16, right: 16, maxWidth: 480, margin: '0 auto', zIndex: 50, pointerEvents: 'none' }}>
+      {messages.map((msg) => (
+        <div key={msg.id} style={{ pointerEvents: 'auto', marginBottom: 8 }}>
+          <div className="ai-coach-bubble">
+            <span className="ai-coach-face">{COACH_FACES[faceIndex]}</span>
+            <p style={{ fontSize: 14, color: '#0f7665', lineHeight: 1.6, margin: 0 }}>{msg.text}</p>
           </div>
-        </motion.div>
+        </div>
+      ))}
+      {isThinking && messages.length === 0 && (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.9)', borderRadius: 16, padding: '10px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', pointerEvents: 'auto' }}>
+          <span style={{ fontSize: 20 }}>🧘</span>
+          <span className="thinking-dots">
+            <span className="thinking-dot" style={{ animationDelay: '0s' }}></span>
+            <span className="thinking-dot" style={{ animationDelay: '0.15s' }}></span>
+            <span className="thinking-dot" style={{ animationDelay: '0.3s' }}></span>
+          </span>
+        </div>
       )}
     </div>
   );
