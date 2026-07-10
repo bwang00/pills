@@ -13,7 +13,7 @@ export default function MindfulnessPage() {
   const [guide, setGuide] = useState<Guide | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
-  const { playBell, unlockAudio } = useAudio();
+  const { playBell, unlockAudio, startBgMusic, stopBgMusic } = useAudio();
 
   const config = guide ? (guide.config as MindfulnessConfig) : { duration_minutes: 5, prompts: [] };
   const { state, elapsed, totalSeconds, currentPrompt, promptOpacity, start, stop } = useMeditation(config.duration_minutes || 5, config.prompts || []);
@@ -36,17 +36,23 @@ export default function MindfulnessPage() {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);
     } catch {}
+    startBgMusic();
     playBell();
     start();
   };
 
   useEffect(() => {
     if (state === 'completed' && sessionId) {
+      stopBgMusic();
       fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed_at: new Date().toISOString(), duration_seconds: totalSeconds }) }).catch(() => {});
       playBell();
     }
-  }, [state, sessionId, totalSeconds, playBell]);
+  }, [state, sessionId, totalSeconds, playBell, stopBgMusic]);
+
+  useEffect(() => {
+    if (state === 'idle') stopBgMusic();
+  }, [state, stopBgMusic]);
 
   if (!guide) return <Layout title="加载中…"><div className="text-center text-calm-400 py-16">加载中…</div></Layout>;
 

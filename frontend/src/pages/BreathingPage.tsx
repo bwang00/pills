@@ -17,7 +17,7 @@ export default function BreathingPage() {
   const phases = (guide?.config as BreathingConfig)?.phases || [];
   const totalRounds = 4;
   const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop } = useBreathing(phases, totalRounds);
-  const { playTone, playBell, unlockAudio } = useAudio();
+  const { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic } = useAudio();
   const prevPhaseRef = useRef(-1);
 
   useEffect(() => {
@@ -49,17 +49,24 @@ export default function BreathingPage() {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);
     } catch {}
+    if (soundOn) startBgMusic();
     playBell();
     start();
   };
 
   useEffect(() => {
     if (state === 'completed' && sessionId) {
+      stopBgMusic();
       fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed_at: new Date().toISOString(), duration_seconds: totalRounds * phases.reduce((s, p) => s + p.duration, 0) }) }).catch(() => {});
       if (soundOn) playBell();
     }
-  }, [state, sessionId, totalRounds, phases, soundOn, playBell]);
+  }, [state, sessionId, totalRounds, phases, soundOn, playBell, stopBgMusic]);
+
+  // Stop bg music when exercise is stopped (back to idle)
+  useEffect(() => {
+    if (state === 'idle') stopBgMusic();
+  }, [state, stopBgMusic]);
 
   if (!guide) return <Layout title="加载中…"><div className="text-center text-calm-400 py-16">加载中…</div></Layout>;
   const phaseName = phases[currentPhaseIndex]?.name || '';
