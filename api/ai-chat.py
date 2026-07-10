@@ -45,14 +45,14 @@ def _call_qwen(messages: list[dict]) -> str:
         return "抱歉，AI 服务暂时不可用。你可以先试试深呼吸或感官着陆引导。"
 
     payload = json.dumps({
-        "model": "qwen-plus",
+        "model": "qwen3.7-plus",
         "messages": messages,
         "temperature": 0.7,
         "max_tokens": 300,
     }).encode()
 
     req = urllib.request.Request(
-        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "https://ws-os2hjo7wanzpcewt.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
         data=payload,
         headers={
             "Content-Type": "application/json",

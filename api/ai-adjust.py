@@ -29,14 +29,14 @@ def _call_qwen(messages: list[dict]) -> str:
         return json.dumps({"suggestion": "继续按照你的节奏来", "adjustments": {"duration_modifier": 1.0}}, ensure_ascii=False)
 
     payload = json.dumps({
-        "model": "qwen-plus",
+        "model": "qwen3.7-plus",
         "messages": messages,
         "temperature": 0.5,
         "max_tokens": 200,
     }).encode()
 
     req = urllib.request.Request(
-        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "https://ws-os2hjo7wanzpcewt.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
         data=payload,
         headers={
             "Content-Type": "application/json",
