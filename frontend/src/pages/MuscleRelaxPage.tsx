@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
+import StepTimer from '../components/StepTimer';
 import { useMuscleRelax } from '../hooks/useMuscleRelax';
 import type { Guide, MuscleRelaxConfig } from '../types';
 
@@ -128,6 +129,9 @@ export default function MuscleRelaxPage() {
             </div>
           )}
           {phase === 'transition' && <p className="text-calm-500 text-lg mb-4 animate-pulse-slow">准备下一个部位…</p>}
+          <div className="max-w-xs mx-auto mb-4">
+            <StepTimer label={`${currentStep.body_part} · ${phase === 'tense' ? '收紧' : '放松'}`} running={phase === 'tense' || phase === 'relax'} targetSeconds={phase === 'tense' ? currentStep.tense_duration : currentStep.relax_duration} />
+          </div>
           <div className="flex justify-center gap-3 mb-6">
             <span className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${phase === 'tense' ? 'bg-orange-100 text-orange-600' : 'bg-calm-50 text-calm-400'}`}>收紧</span>
             <span className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${phase === 'relax' ? 'bg-calm-100 text-calm-600' : 'bg-calm-50 text-calm-400'}`}>放松</span>

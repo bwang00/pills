@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
+import StepTimer from '../components/StepTimer';
 import { useBreathing } from '../hooks/useBreathing';
 import { useAudio } from '../hooks/useAudio';
 import type { Guide, BreathingConfig } from '../types';
@@ -119,6 +120,7 @@ export default function BreathingPage() {
   }
 
   if (state === 'running') {
+    const currentPhase = phases[currentPhaseIndex];
     return (
       <Layout title={guide.title}>
         <div className="flex justify-end mb-2">
@@ -142,6 +144,12 @@ export default function BreathingPage() {
               </div>
             </div>
           </div>
+
+          {/* Step timer on the side */}
+          <div className="max-w-xs mx-auto mb-4">
+            <StepTimer label={`${phaseName} · 第${currentRound}轮`} running={true} targetSeconds={currentPhase?.duration} />
+          </div>
+
           <div className="flex justify-center gap-2 mb-6 max-w-xs mx-auto">
             {phases.map((_, i) => (
               <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${

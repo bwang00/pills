@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
+import StepTimer from '../components/StepTimer';
 import { useMeditation } from '../hooks/useMeditation';
 import { useAudio } from '../hooks/useAudio';
 import type { Guide, MindfulnessConfig } from '../types';
@@ -109,6 +110,9 @@ export default function MindfulnessPage() {
           <p className="text-calm-600 text-lg mb-8 min-h-[3em] max-w-xs mx-auto leading-relaxed px-4 transition-opacity duration-1000" style={{ opacity: promptOpacity }}>
             {currentPrompt}
           </p>
+          <div className="max-w-xs mx-auto mb-4">
+            <StepTimer label="冥想中" running={true} targetSeconds={totalSeconds} />
+          </div>
           <button onClick={stop} className="text-calm-400 text-sm">结束冥想</button>
         </div>
       )}
