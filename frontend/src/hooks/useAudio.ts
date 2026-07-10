@@ -1,5 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { setSharedAudioCtx } from './useSpeech';
+import promptMap from '../../public/audio/prompts/prompt-map.json';
 
 type ToneType = 'inhale' | 'hold' | 'exhale' | 'transition' | 'bell';
 
@@ -13,12 +14,15 @@ const TONE_FILES: Record<ToneType, string> = {
 
 const BG_MUSIC_URL = '/audio/ambient-bg.wav';
 const BG_MUSIC_VOL = 0.25;
+const PROMPT_BASE_URL = '/audio/prompts/';
+const PROMPT_VOL = 0.8;
 
 export function useAudio() {
   const ctxRef = useRef<AudioContext | null>(null);
   const bufferCache = useRef<Map<string, AudioBuffer>>(new Map());
   const bgSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const bgGainRef = useRef<GainNode | null>(null);
+  const promptSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const getCtx = useCallback(async () => {
     if (!ctxRef.current) {
@@ -112,9 +116,56 @@ export function useAudio() {
     bgGainRef.current = null;
   }, []);
 
+  const playPromptAudio = useCallback(async (promptText: string) => {
+    if (!promptText) return;
+    try {
+      const filename = (promptMap as Record<string, string>)[promptText];
+      if (!filename) {
+        console.warn('[Audio] No audio file for prompt:', promptText);
+        return;
+      }
+
+      const ctx = await getCtx();
+
+      // Stop any currently playing prompt
+      if (promptSourceRef.current) {
+        try { promptSourceRef.current.stop(); } catch {}
+        promptSourceRef.current = null;
+      }
+
+      const url = PROMPT_BASE_URL + filename;
+      const buffer = await loadBuffer(ctx, url);
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(PROMPT_VOL, ctx.currentTime);
+
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(ctx.currentTime);
+
+      promptSourceRef.current = source;
+
+      // Lower bg music volume while prompt plays, then restore
+      if (bgGainRef.current && ctxRef.current) {
+        const now = ctxRef.current.currentTime;
+        bgGainRef.current.gain.cancelScheduledValues(now);
+        bgGainRef.current.gain.setValueAtTime(bgGainRef.current.gain.value, now);
+        bgGainRef.current.gain.linearRampToValueAtTime(0.08, now + 0.5);
+        // Restore after prompt finishes
+        const restoreTime = now + buffer.duration + 0.5;
+        bgGainRef.current.gain.linearRampToValueAtTime(BG_MUSIC_VOL, restoreTime);
+      }
+    } catch (e) {
+      console.warn('[Audio] playPromptAudio failed:', promptText, e);
+    }
+  }, [getCtx, loadBuffer]);
+
   const unlockAudio = useCallback(async () => {
     await getCtx();
   }, [getCtx]);
 
-  return { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic };
+  return { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic, playPromptAudio };
 }

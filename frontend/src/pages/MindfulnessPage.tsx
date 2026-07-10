@@ -13,7 +13,7 @@ export default function MindfulnessPage() {
   const [guide, setGuide] = useState<Guide | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
-  const { playBell, unlockAudio, startBgMusic, stopBgMusic } = useAudio();
+  const { playBell, unlockAudio, startBgMusic, stopBgMusic, playPromptAudio } = useAudio();
 
   const config = guide ? (guide.config as MindfulnessConfig) : { duration_minutes: 5, prompts: [] };
   const { state, elapsed, totalSeconds, currentPrompt, promptOpacity, start, stop } = useMeditation(config.duration_minutes || 5, config.prompts || []);
@@ -53,6 +53,12 @@ export default function MindfulnessPage() {
   useEffect(() => {
     if (state === 'idle') stopBgMusic();
   }, [state, stopBgMusic]);
+
+  useEffect(() => {
+    if (state === 'running' && currentPrompt) {
+      playPromptAudio(currentPrompt);
+    }
+  }, [currentPrompt, state, playPromptAudio]);
 
   if (!guide) return <Layout title="加载中…"><div className="text-center text-calm-400 py-16">加载中…</div></Layout>;
 
