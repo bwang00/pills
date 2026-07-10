@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import { setSharedAudioCtx } from './useSpeech';
 
 type ToneType = 'inhale' | 'hold' | 'exhale' | 'transition' | 'bell';
 
@@ -13,16 +14,22 @@ const TONE_MAP: Record<ToneType, { freq: number; duration: number; type: Oscilla
 export function useAudio() {
   const ctxRef = useRef<AudioContext | null>(null);
 
-  const getCtx = useCallback(() => {
+  const getCtx = useCallback(async () => {
     if (!ctxRef.current) {
       ctxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // Share with useSpeech for TTS playback
+    setSharedAudioCtx(ctxRef.current);
+    // Resume if suspended (browsers require user gesture to start audio)
+    if (ctxRef.current.state === 'suspended') {
+      await ctxRef.current.resume();
     }
     return ctxRef.current;
   }, []);
 
-  const playTone = useCallback((tone: ToneType, volume = 0.15) => {
+  const playTone = useCallback(async (tone: ToneType, volume = 0.15) => {
     try {
-      const ctx = getCtx();
+      const ctx = await getCtx();
       const { freq, duration, type } = TONE_MAP[tone];
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -40,7 +47,7 @@ export function useAudio() {
     }
   }, [getCtx]);
 
-  const playBell = useCallback(() => playTone('bell', 0.12), [playTone]);
+  const playBell = useCallback(() => { playTone('bell', 0.12); }, [playTone]);
 
   return { playTone, playBell };
 }

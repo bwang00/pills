@@ -5,6 +5,7 @@ import AICoach from '../components/AICoach';
 import StepTimer from '../components/StepTimer';
 import GroundingStepCard from '../components/GroundingStep';
 import { useGrounding } from '../hooks/useGrounding';
+import { useAudio } from '../hooks/useAudio';
 import type { Guide, GroundingConfig } from '../types';
 
 const senseIcons: Record<string, string> = { '看': '👁️', '触摸': '✋', '听': '👂', '闻': '👃', '尝': '👅' };
@@ -18,6 +19,7 @@ export default function GroundingPage() {
 
   const steps = (guide?.config as GroundingConfig)?.steps || [];
   const { state, currentStepIndex, entryCount, notes, currentInput, start, setInput, addEntry, skipStep, stop } = useGrounding(steps);
+  const { playBell } = useAudio();
 
   useEffect(() => {
     if (!slug) return;
@@ -41,6 +43,7 @@ export default function GroundingPage() {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);
     } catch {}
+    playBell();
     start();
   };
 

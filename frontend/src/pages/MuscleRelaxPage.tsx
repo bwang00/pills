@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
 import StepTimer from '../components/StepTimer';
 import { useMuscleRelax } from '../hooks/useMuscleRelax';
+import { useAudio } from '../hooks/useAudio';
 import type { Guide, MuscleRelaxConfig } from '../types';
 
 const bodyPartEmoji: Record<string, string> = {
@@ -31,6 +32,7 @@ export default function MuscleRelaxPage() {
 
   const steps = (guide?.config as MuscleRelaxConfig)?.steps || [];
   const { state, currentStepIndex, phase, timeRemaining, progress, start, stop } = useMuscleRelax(steps);
+  const { playBell } = useAudio();
   const currentStep = steps[currentStepIndex];
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function MuscleRelaxPage() {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);
     } catch {}
+    playBell();
     start();
   };
 
