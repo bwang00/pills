@@ -19,6 +19,7 @@ dist/
 .vite/
 .DS_Store
 *.log
+*.tsbuildinfo
 
 # Vercel
 .vercel/
