@@ -1,0 +1,114 @@
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export default function AIChatPage() {
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'assistant', content: '你好，我是 Pills AI 助手。告诉我你现在的感受，我会为你推荐合适的放松方式。' },
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg: Message = { role: 'user', content: input.trim() };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg.content, history: newMessages.slice(0, -1) }),
+      });
+      const data = await res.json();
+      setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+    } catch {
+      setMessages([...newMessages, { role: 'assistant', content: '抱歉，我暂时无法回复。请稍后再试。' }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Layout title="AI 对话">
+      <div className="flex flex-col h-[calc(100vh-120px)]">
+        {/* Chat messages */}
+        <div className="flex-1 overflow-y-auto space-y-4 py-4">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                msg.role === 'user'
+                  ? 'bg-calm-500 text-white rounded-br-sm'
+                  : 'bg-white border border-calm-100 text-calm-800 rounded-bl-sm'
+              }`}>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                {/* Check for guide recommendation link */}
+                {msg.role === 'assistant' && msg.content.includes('[推荐:') && (
+                  <button
+                    onClick={() => {
+                      const match = msg.content.match(/\[推荐:([^\]]+)\]/);
+                      if (match) {
+                        const slug = match[1];
+                        if (slug.startsWith('breathing')) navigate(`/guide/${slug}`);
+                        else if (slug.startsWith('grounding')) navigate(`/guide/${slug}`);
+                        else if (slug.startsWith('muscle')) navigate(`/guide/${slug}`);
+                        else if (slug.startsWith('mindfulness')) navigate(`/guide/${slug}`);
+                      }
+                    }}
+                    className="mt-2 text-calm-500 underline text-sm"
+                  >
+                    点击开始引导
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-white border border-calm-100 rounded-2xl rounded-bl-sm px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-calm-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-calm-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-calm-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input area */}
+        <div className="flex gap-2 pt-2 pb-4 border-t border-calm-100">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder="告诉我你现在的感受…"
+            className="flex-1 rounded-full border border-calm-200 px-4 py-3 text-calm-800 placeholder:text-calm-300 focus:outline-none focus:border-calm-400 transition-colors"
+            disabled={loading}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={loading || !input.trim()}
+            className="rounded-full bg-calm-500 text-white px-6 py-3 font-semibold hover:bg-calm-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            发送
+          </button>
+        </div>
+      </div>
+    </Layout>
+  );
+}

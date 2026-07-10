@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import GroundingStepCard from '../components/GroundingStep';
 import { useGrounding } from '../hooks/useGrounding';
 import type { Guide, GroundingConfig } from '../types';
 
 export default function GroundingPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
+  const slug = location.pathname.replace('/guide/', '');
   const [guide, setGuide] = useState<Guide | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -35,15 +36,14 @@ export default function GroundingPage() {
     try {
       const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
       const data = await res.json(); setSessionId(data.id);
-    } catch { /* non-critical */ }
+    } catch {}
     start();
   };
 
   useEffect(() => {
     if (state === 'completed' && sessionId) {
       fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed_at: new Date().toISOString(), notes })
-      }).catch(() => {});
+        body: JSON.stringify({ completed_at: new Date().toISOString(), notes }) }).catch(() => {});
     }
   }, [state, sessionId, notes]);
 
