@@ -16,7 +16,7 @@ export default function BreathingPage() {
 
   const phases = (guide?.config as BreathingConfig)?.phases || [];
   const totalRounds = 4;
-  const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop } = useBreathing(phases, totalRounds);
+  const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop, finish } = useBreathing(phases, totalRounds);
   const { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic } = useAudio();
   const prevPhaseRef = useRef(-1);
 
@@ -57,11 +57,13 @@ export default function BreathingPage() {
   useEffect(() => {
     if (state === 'completed' && sessionId) {
       stopBgMusic();
+      const cycleDuration = phases.reduce((s, p) => s + p.duration, 0);
+      const durationSecs = (currentRound - 1) * cycleDuration;
       fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed_at: new Date().toISOString(), duration_seconds: totalRounds * phases.reduce((s, p) => s + p.duration, 0) }) }).catch(() => {});
+        body: JSON.stringify({ completed_at: new Date().toISOString(), duration_seconds: durationSecs }) }).catch(() => {});
       if (soundOn) playBell();
     }
-  }, [state, sessionId, totalRounds, phases, soundOn, playBell, stopBgMusic]);
+  }, [state, sessionId, currentRound, phases, soundOn, playBell, stopBgMusic]);
 
   // Stop bg music when exercise is stopped (back to idle)
   useEffect(() => {
@@ -70,7 +72,6 @@ export default function BreathingPage() {
 
   if (!guide) return <Layout title="加载中…"><div className="text-center text-calm-400 py-16">加载中…</div></Layout>;
   const phaseName = phases[currentPhaseIndex]?.name || '';
-  const totalCycleDuration = phases.reduce((s, p) => s + p.duration, 0);
   const circleR = 80;
   const circumference = 2 * Math.PI * circleR;
   const strokeOffset = circumference * (1 - progress);
@@ -92,7 +93,7 @@ export default function BreathingPage() {
             <span className="text-3xl">🫁</span>
             <div>
               <h2 className="font-semibold text-calm-800">什么是{guide.title}？</h2>
-              <p className="text-calm-400 text-xs">呼吸调节 · 约 {Math.ceil(totalCycleDuration * totalRounds / 60)} 分钟</p>
+              <p className="text-calm-400 text-xs">呼吸调节 · 持续循环直到你准备好停下</p>
             </div>
           </div>
           <p className="text-calm-600 text-sm leading-relaxed mb-4">
@@ -135,7 +136,7 @@ export default function BreathingPage() {
           <button onClick={() => setSoundOn(!soundOn)} className="text-calm-400 text-sm">{soundOn ? '🔊 声音开' : '🔇 声音关'}</button>
         </div>
         <div className="text-center py-4 animate-fade-in">
-          <p className="text-calm-400 text-sm mb-6">第 {currentRound} / {totalRounds} 轮</p>
+          <p className="text-calm-400 text-sm mb-6">第 {currentRound} 轮</p>
           <div className="relative w-56 h-56 mx-auto mb-6">
             <svg className="w-full h-full" viewBox="0 0 200 200">
               <circle cx="100" cy="100" r={circleR} fill="none" stroke="#e0e7ef" strokeWidth="6" />
@@ -167,7 +168,7 @@ export default function BreathingPage() {
           </div>
           <div className="flex justify-center gap-4">
             <button onClick={pause} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">暂停</button>
-            <button onClick={stop} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">结束</button>
+            <button onClick={() => { stopBgMusic(); finish(); }} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">结束</button>
           </div>
         </div>
         <AICoach guideType="breathing" currentPhase={phaseName} triggerKey={currentRound} enabled={true} />
@@ -184,7 +185,7 @@ export default function BreathingPage() {
           </div>
           <div className="flex justify-center gap-4">
             <button onClick={resume} className="rounded-full bg-calm-500 text-white px-8 py-3 font-semibold">继续</button>
-            <button onClick={stop} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">结束</button>
+            <button onClick={() => { stopBgMusic(); finish(); }} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">结束</button>
           </div>
         </div>
       </Layout>
@@ -199,7 +200,7 @@ export default function BreathingPage() {
           <span className="text-4xl">✨</span>
         </div>
         <p className="text-calm-700 text-xl font-semibold mb-2">做得很好</p>
-        <p className="text-calm-400 text-sm mb-6">你完成了 {totalRounds} 轮呼吸练习。花一点时间感受身体的变化。</p>
+        <p className="text-calm-400 text-sm mb-6">你完成了 {currentRound - 1} 轮呼吸练习。花一点时间感受身体的变化。</p>
         <div className="flex justify-center gap-3">
           <button onClick={() => stop()} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">再来一次</button>
           <button onClick={() => navigate('/')} className="rounded-full bg-calm-500 text-white px-8 py-3 font-semibold">返回首页</button>

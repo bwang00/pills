@@ -20,17 +20,15 @@ export function useBreathing(phases: GuidePhase[], rounds: number = 4) {
     setCurrentPhaseIndex((pi) => {
       const next = pi + 1;
       if (next >= phases.length) {
-        setCurrentRound((r) => {
-          if (r >= rounds) { setState('completed'); clearTimer(); return r; }
-          return r + 1;
-        });
+        // Infinite loop: increment round, never complete
+        setCurrentRound((r) => r + 1);
         setTimeRemaining(phases[0]?.duration || 4);
         return 0;
       }
       setTimeRemaining(phases[next]?.duration || 4);
       return next;
     });
-  }, [phases, rounds, clearTimer]);
+  }, [phases, clearTimer]);
 
   useEffect(() => { setProgress(1 - timeRemaining / phaseDuration); }, [timeRemaining, phaseDuration]);
 
@@ -58,6 +56,9 @@ export function useBreathing(phases: GuidePhase[], rounds: number = 4) {
     setState('idle'); setCurrentPhaseIndex(0); setCurrentRound(1);
     setTimeRemaining(0); setProgress(0); clearTimer();
   }, [clearTimer]);
+  const finish = useCallback(() => {
+    setState('completed'); clearTimer();
+  }, [clearTimer]);
 
-  return { state, currentPhaseIndex, timeRemaining, totalRounds: rounds, currentRound, progress, start, pause, resume, stop };
+  return { state, currentPhaseIndex, timeRemaining, totalRounds: rounds, currentRound, progress, start, pause, resume, stop, finish };
 }
