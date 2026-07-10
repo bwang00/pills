@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
 import { useMuscleRelax } from '../hooks/useMuscleRelax';
@@ -22,9 +22,8 @@ const bodyPartPaths: Record<string, string> = {
 };
 
 export default function MuscleRelaxPage() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const slug = location.pathname.replace('/guide/', '');
+  const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);

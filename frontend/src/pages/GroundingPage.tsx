@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
 import GroundingStepCard from '../components/GroundingStep';
@@ -10,9 +10,8 @@ const senseIcons: Record<string, string> = { '看': '👁️', '触摸': '✋', 
 const senseColors: Record<string, string> = { '看': 'from-blue-300 to-blue-500', '触摸': 'from-amber-300 to-amber-500', '听': 'from-violet-300 to-violet-500', '闻': 'from-pink-300 to-pink-500', '尝': 'from-green-300 to-green-500' };
 
 export default function GroundingPage() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const slug = location.pathname.replace('/guide/', '');
+  const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);

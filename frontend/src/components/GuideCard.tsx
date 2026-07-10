@@ -13,16 +13,9 @@ const categoryIcons: Record<string, string> = {
 };
 
 export default function GuideCard({ guide }: GuideCardProps) {
-  const prefix = guide.category === 'breathing' ? 'guide/breathing'
-    : guide.category === 'grounding' ? 'guide/grounding'
-    : guide.category === 'muscle_relax' ? 'guide/muscle-relax'
-    : guide.category === 'mindfulness' ? 'guide/mindfulness'
-    : 'guide';
-  const suffix = guide.slug.replace(/^(breathing|grounding|muscle-relax|mindfulness)-/, '');
-
   return (
     <Link
-      to={`/${prefix}-${suffix}`}
+      to={`/guide/${guide.slug}`}
       className="block bg-white rounded-2xl p-6 shadow-sm border border-calm-100 hover:shadow-md hover:border-calm-200 transition-all duration-300"
     >
       <div className="text-3xl mb-3">{categoryIcons[guide.category] || '✨'}</div>

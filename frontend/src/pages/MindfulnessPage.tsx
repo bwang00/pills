@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
 import { useMeditation } from '../hooks/useMeditation';
@@ -7,9 +7,8 @@ import { useAudio } from '../hooks/useAudio';
 import type { Guide, MindfulnessConfig } from '../types';
 
 export default function MindfulnessPage() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const slug = location.pathname.replace('/guide/', '');
+  const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);

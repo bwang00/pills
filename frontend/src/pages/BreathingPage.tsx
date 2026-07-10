@@ -1,12 +1,14 @@
+import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import type { Guide, BreathingConfig } from '../types';
 
 export default function BreathingPage() {
-  const location = useLocation();
+
   const navigate = useNavigate();
-  const slug = location.pathname.replace('/guide/', '');
+
+  const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
   const [started, setStarted] = useState(false);
 
