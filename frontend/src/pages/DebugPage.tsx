@@ -11,8 +11,8 @@ class TestErrorBoundary extends Component<{children: ReactNode}, {error: string}
 }
 
 function BreathingTest() {
-  const phases = [{name:'吸气',duration:4},{name:'屏息',duration:7},{name:'呼气',duration:8}];
-  const { state, currentPhaseIndex, timeRemaining } = useBreathing(phases, 4);
+  const phases = [{name:'吸气',duration:4},{name:'闭气',duration:7},{name:'呼气',duration:8}];
+  const { state, currentPhaseIndex, timeRemaining } = useBreathing(phases);
   return <p>Hook OK — state: {state}, phase: {currentPhaseIndex}, time: {timeRemaining}</p>;
 }
 

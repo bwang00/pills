@@ -15,8 +15,7 @@ export default function BreathingPage() {
   const [soundOn, setSoundOn] = useState(true);
 
   const phases = (guide?.config as BreathingConfig)?.phases || [];
-  const totalRounds = 4;
-  const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop, finish } = useBreathing(phases, totalRounds);
+  const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop, finish } = useBreathing(phases);
   const { playTone, playBell, unlockAudio, startBgMusic, stopBgMusic } = useAudio();
   const prevPhaseRef = useRef(-1);
 
