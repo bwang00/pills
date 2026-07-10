@@ -27,7 +27,7 @@ export default function BreathingPage() {
       if (g) setGuide(g);
     }).catch(() => {
       setGuide({ id: 'fallback', slug, title: '呼吸引导', description: '', category: 'breathing',
-        config: { phases: [{ name: '吸气', duration: 4 }, { name: '屏息', duration: 8 }, { name: '呼气', duration: 8 }] }, sort_order: 0 });
+        config: { phases: [{ name: '吸气', duration: 4 }, { name: '闭气', duration: 7 }, { name: '呼气', duration: 8 }] }, sort_order: 0 });
     });
   }, [slug]);
 
@@ -37,7 +37,7 @@ export default function BreathingPage() {
       prevPhaseRef.current = currentPhaseIndex;
       const name = phases[currentPhaseIndex]?.name || '';
       if (name === '吸气') playTone('inhale');
-      else if (name === '屏息') playTone('hold');
+      else if (name === '闭气') playTone('hold');
       else if (name === '呼气') playTone('exhale');
       else playTone('transition');
     }
@@ -76,7 +76,7 @@ export default function BreathingPage() {
   const circumference = 2 * Math.PI * circleR;
   const strokeOffset = circumference * (1 - progress);
   const circleScale = phaseName === '吸气' ? 1 + progress * 0.3 : phaseName === '呼气' ? 1.3 - progress * 0.3 : 1.15;
-  const circleBg = phaseName === '吸气' ? 'from-calm-300 to-calm-500' : phaseName === '屏息' ? 'from-calm-400 to-calm-600' : 'from-calm-200 to-calm-400';
+  const circleBg = phaseName === '吸气' ? 'from-calm-300 to-calm-500' : phaseName === '闭气' ? 'from-calm-400 to-calm-600' : 'from-calm-200 to-calm-400';
 
   if (state === 'idle') {
     return (
@@ -98,7 +98,7 @@ export default function BreathingPage() {
           </div>
           <p className="text-calm-600 text-sm leading-relaxed mb-4">
             {slug.includes('478')
-              ? '4-7-8 呼吸法被称为"神经系统的天然镇静剂"。通过吸气4秒、屏息7秒、呼气8秒的节奏，激活副交感神经，帮助身体从紧张模式切换到放松状态。'
+              ? '4-7-8 呼吸法被称为"神经系统的天然镇静剂"。通过吸气4秒、闭气7秒、呼气8秒的节奏，激活副交感神经，帮助身体从紧张模式切换到放松状态。'
               : slug.includes('box')
               ? '方块呼吸被广泛使用于高压环境。四个阶段等长时间，形成一个"方块"，帮助保持冷静和专注。'
               : '有意识地控制呼吸节奏，是调节情绪最直接的方式之一。跟着引导，让呼吸慢下来。'}
@@ -108,7 +108,7 @@ export default function BreathingPage() {
             {phases.map((p, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                  p.name === '吸气' ? 'bg-calm-400' : p.name === '屏息' ? 'bg-calm-500' : 'bg-calm-300'
+                  p.name === '吸气' ? 'bg-calm-400' : p.name === '闭气' ? 'bg-calm-500' : 'bg-calm-300'
                 }`}>{i + 1}</div>
                 <div>
                   <p className="text-calm-700 text-sm font-medium">{p.name}</p>
