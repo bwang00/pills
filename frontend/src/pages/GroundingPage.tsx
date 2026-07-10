@@ -18,7 +18,7 @@ export default function GroundingPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const steps = (guide?.config as GroundingConfig)?.steps || [];
-  const { state, currentStepIndex, entryCount, notes, currentInput, start, setInput, addEntry, skipStep, stop } = useGrounding(steps);
+  const { state, currentStepIndex, entryCount, currentRound, notes, currentInput, start, setInput, addEntry, skipStep, stop, finish } = useGrounding(steps);
   const { playBell, unlockAudio } = useAudio();
 
   useEffect(() => {
@@ -108,7 +108,7 @@ export default function GroundingPage() {
           <div className={`w-16 h-16 mx-auto rounded-full bg-gradient-to-br ${senseColors[currentStep.sense] || 'from-calm-300 to-calm-500'} flex items-center justify-center text-2xl text-white shadow-lg mb-2`}>
             {senseIcons[currentStep.sense] || '✨'}
           </div>
-          <p className="text-calm-400 text-sm">第 {currentStepIndex + 1} / {totalSteps} 步</p>
+          <p className="text-calm-400 text-sm">第 {currentRound} 轮 · 第 {currentStepIndex + 1} / {totalSteps} 步</p>
         </div>
         <div className="w-full bg-calm-100 rounded-full h-2 mb-4">
           <div className="bg-calm-400 h-2 rounded-full transition-all duration-500"
@@ -132,7 +132,7 @@ export default function GroundingPage() {
             ))}
           </div>
         )}
-        <button onClick={stop} className="mt-6 w-full text-center text-calm-400 text-sm">结束引导</button>
+        <button onClick={finish} className="mt-6 w-full text-center text-calm-400 text-sm">结束引导</button>
         <AICoach guideType="grounding" currentPhase={currentStep?.sense || ''} triggerKey={currentStepIndex} enabled={true} />
       </Layout>
     );
@@ -146,8 +146,12 @@ export default function GroundingPage() {
           <span className="text-4xl">✨</span>
         </div>
         <p className="text-calm-700 text-xl font-semibold mb-2">你回来了</p>
+        <p className="text-calm-400 text-sm mb-2">完成了 {currentRound - 1} 轮着陆练习，记录了 {notes.length} 条感受。</p>
         <p className="text-calm-400 text-sm mb-6">感受脚下的大地，你一直都在这里。</p>
-        <button onClick={() => navigate('/')} className="rounded-full bg-calm-500 text-white px-8 py-3 font-semibold">返回首页</button>
+        <div className="flex justify-center gap-3">
+          <button onClick={stop} className="rounded-full border border-calm-300 text-calm-600 px-6 py-3">再来一次</button>
+          <button onClick={() => navigate('/')} className="rounded-full bg-calm-500 text-white px-8 py-3 font-semibold">返回首页</button>
+        </div>
       </div>
     </Layout>
   );
