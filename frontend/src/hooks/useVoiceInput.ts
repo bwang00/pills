@@ -31,15 +31,18 @@ export function useVoiceInput(onResult?: (text: string) => void): UseVoiceInputR
     if (!supported) return;
     setError('');
 
-    // Pre-request microphone permission (important for WeChat WebView)
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(t => t.stop());
+    // Pre-request microphone permission only in WeChat WebView
+    const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+    if (isWeChat) {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+        }
+      } catch {
+        setError('麦克风权限被拒绝，请在设置中开启');
+        return;
       }
-    } catch {
-      setError('麦克风权限被拒绝，请在设置中开启');
-      return;
     }
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
