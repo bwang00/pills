@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { useVoiceInput } from '../hooks/useVoiceInput';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -15,6 +16,17 @@ export default function AIChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const handleVoiceResult = (text: string) => {
+    if (text.trim()) {
+      setInput(text.trim());
+    }
+  };
+  const { isListening, transcript, startListening, stopListening, supported } = useVoiceInput(handleVoiceResult);
+
+  useEffect(() => {
+    if (isListening && transcript) setInput(transcript);
+  }, [isListening, transcript]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -90,16 +102,30 @@ export default function AIChatPage() {
         </div>
 
         {/* Input area */}
-        <div className="flex gap-2 pt-2 pb-4 border-t border-calm-100">
+        <div className="flex gap-2 pt-2 pb-4 border-t border-calm-100 items-center">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="告诉我你现在的感受…"
+            placeholder={isListening ? '正在听你说…' : '告诉我你现在的感受…'}
             className="flex-1 rounded-full border border-calm-200 px-4 py-3 text-calm-800 placeholder:text-calm-300 focus:outline-none focus:border-calm-400 transition-colors"
-            disabled={loading}
+            disabled={loading || isListening}
           />
+          {supported && (
+            <button
+              onClick={() => isListening ? stopListening() : startListening()}
+              disabled={loading}
+              className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                isListening ? 'bg-red-500 text-white scale-110' : 'bg-calm-100 text-calm-500'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim()}
