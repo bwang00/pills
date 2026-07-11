@@ -22,7 +22,7 @@ export default function AIChatPage() {
       setInput(text.trim());
     }
   };
-  const { isListening, transcript, startListening, stopListening, supported } = useVoiceInput(handleVoiceResult);
+  const { isListening, transcript, error: voiceError, startListening, stopListening, supported } = useVoiceInput(handleVoiceResult);
 
   useEffect(() => {
     if (isListening && transcript) setInput(transcript);
@@ -100,6 +100,10 @@ export default function AIChatPage() {
           )}
           <div ref={chatEndRef} />
         </div>
+
+        {voiceError && (
+          <div className="text-center text-red-400 text-xs py-1">{voiceError}</div>
+        )}
 
         {/* Input area */}
         <div className="flex gap-2 pt-2 pb-4 border-t border-calm-100 items-center">

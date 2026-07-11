@@ -16,7 +16,7 @@ export default function GroundingStepCard({ sense, count, prompt, entryCount, cu
     onInputChange(text.trim());
   }, [onInputChange]);
 
-  const { isListening, startListening, stopListening, supported } = useVoiceInput(handleVoiceResult);
+  const { isListening, error: voiceError, startListening, stopListening, supported } = useVoiceInput(handleVoiceResult);
 
   const toggleVoice = () => {
     if (isListening) {
@@ -52,6 +52,9 @@ export default function GroundingStepCard({ sense, count, prompt, entryCount, cu
       </div>
       {isListening && (
         <p className="text-calm-400 text-xs mt-2 animate-pulse-gentle">正在听…请说出你{sense}到的</p>
+      )}
+      {voiceError && (
+        <p className="text-red-400 text-xs mt-2">{voiceError}</p>
       )}
       <button onClick={onSkip} className="mt-3 text-calm-400 text-sm hover:text-calm-600 transition-colors">跳过此步骤</button>
     </div>
