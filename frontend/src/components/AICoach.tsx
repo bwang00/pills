@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSpeech } from '../hooks/useSpeech';
+import { useVoiceInput } from '../hooks/useVoiceInput';
 
 interface AICoachProps {
   guideType: string;
@@ -21,6 +22,47 @@ export default function AICoach({ guideType, currentPhase = '', triggerKey, enab
   const msgIdRef = useRef(0);
   const lastTriggerRef = useRef<string>('');
   const { speak, stop: stopSpeech } = useSpeech();
+  const [userInput, setUserInput] = useState('');
+
+  const sendUserInput = useCallback(async (text: string) => {
+    if (!text.trim() || isThinking) return;
+    setUserInput('');
+    setIsThinking(true);
+    setIsSpeaking(false);
+    stopSpeech();
+    try {
+      const res = await fetch('/api/ai-adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guide_type: guideType, current_phase: currentPhase, user_input: text }),
+      });
+      const data = await res.json();
+      if (data.suggestion) {
+        const id = ++msgIdRef.current;
+        setMessages((prev) => [...prev.slice(-1), { text: data.suggestion, id }]);
+        setIsThinking(false);
+        setIsSpeaking(true);
+        if (voiceOn) speak(data.suggestion);
+        const dismissTime = Math.max(data.suggestion.length * 150, 6000);
+        setTimeout(() => {
+          setIsSpeaking(false);
+          setMessages((prev) => prev.filter((m) => m.id !== id));
+        }, dismissTime);
+      }
+    } catch {
+      setIsThinking(false);
+    }
+  }, [guideType, currentPhase, voiceOn, speak, stopSpeech, isThinking]);
+
+  const handleVoiceResult = useCallback((text: string) => {
+    if (text.trim()) setTimeout(() => sendUserInput(text.trim()), 200);
+  }, [sendUserInput]);
+
+  const { isListening, transcript, startListening, stopListening, supported } = useVoiceInput(handleVoiceResult);
+
+  useEffect(() => {
+    if (isListening && transcript) setUserInput(transcript);
+  }, [isListening, transcript]);
 
   const fetchTip = useCallback(async () => {
     if (!enabled) return;
@@ -124,6 +166,46 @@ export default function AICoach({ guideType, currentPhase = '', triggerKey, enab
           <p className="text-calm-700 text-sm leading-relaxed text-center">{currentMsg.text}</p>
         </div>
       )}
+
+      {/* Input bar */}
+      <div className="w-full max-w-sm mt-3 pointer-events-auto">
+        <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-md border border-calm-100">
+          <input
+            type="text"
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendUserInput(userInput.trim()); } }}
+            placeholder={isListening ? '正在听你说…' : '说说你的感受…'}
+            className="flex-1 text-sm outline-none bg-transparent text-calm-700 placeholder:text-calm-300"
+            disabled={isListening}
+          />
+          {supported && (
+            <button
+              onClick={() => isListening ? stopListening() : startListening()}
+              disabled={isThinking}
+              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                isListening ? 'bg-red-500 text-white scale-110' : 'bg-calm-100 text-calm-500'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+            </button>
+          )}
+          {userInput.trim() && !isListening && (
+            <button
+              onClick={() => sendUserInput(userInput.trim())}
+              disabled={isThinking}
+              className="w-8 h-8 rounded-full bg-calm-500 text-white flex items-center justify-center flex-shrink-0"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
