@@ -5,6 +5,7 @@ interface Conversation {
   created_at: string;
   updated_at: string;
   message_count: number;
+  first_message?: string;
 }
 
 interface Tag {
@@ -48,7 +49,8 @@ export default function ConversationList({
       const url = tag ? `/api/conversations?tag=${encodeURIComponent(tag)}` : '/api/conversations';
       const response = await fetch(url);
       const data = await response.json();
-      setConversations(data);
+      // Limit to 20 conversations
+      setConversations(data.slice(0, 20));
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
     } finally {
@@ -68,11 +70,20 @@ export default function ConversationList({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${month}月${day}日 ${hours}:${minutes}`;
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      // Today: show time only
+      return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+    } else if (diffDays === 1) {
+      return '昨天';
+    } else if (diffDays < 7) {
+      return `${diffDays}天前`;
+    } else {
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
   };
 
   const handleDelete = async (e: React.MouseEvent, conversationId: string) => {
@@ -133,24 +144,26 @@ export default function ConversationList({
               <div
                 key={conv.id}
                 onClick={() => onSelectConversation(conv.id)}
-                className={`p-4 cursor-pointer hover:bg-calm-50 transition-colors ${
+                className={`px-3 py-2.5 cursor-pointer hover:bg-calm-50 transition-colors ${
                   selectedConversationId === conv.id ? 'bg-calm-100' : ''
                 }`}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="text-sm text-calm-600">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-calm-400">
                     {formatDate(conv.updated_at)}
-                  </div>
+                  </span>
                   <button
                     onClick={(e) => handleDelete(e, conv.id)}
-                    className="text-calm-400 hover:text-red-500 text-sm"
+                    className="text-calm-300 hover:text-red-400 text-xs ml-2"
                   >
-                    删除
+                    ✕
                   </button>
                 </div>
-                <div className="text-xs text-calm-500">
-                  {conv.message_count} 条消息
-                </div>
+                {conv.first_message && (
+                  <p className="text-sm text-calm-700 truncate leading-snug">
+                    {conv.first_message}
+                  </p>
+                )}
               </div>
             ))}
           </div>

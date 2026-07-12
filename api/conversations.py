@@ -198,9 +198,11 @@ class handler(BaseHTTPRequestHandler):
                 if conversation_ids is not None and conv["id"] not in conversation_ids:
                     continue
                     
-                # Get message count for each conversation
-                msg_result = db_client.table("conversation_messages").select("id", count="exact").eq("conversation_id", conv["id"]).execute()
-                conv["message_count"] = msg_result.count or 0
+                # Get message count and first message for each conversation
+                msg_result = db_client.table("conversation_messages").select("id, content").eq("conversation_id", conv["id"]).order("created_at").limit(1).execute()
+                count_result = db_client.table("conversation_messages").select("id", count="exact").eq("conversation_id", conv["id"]).execute()
+                conv["message_count"] = count_result.count or 0
+                conv["first_message"] = msg_result.data[0]["content"][:50] if msg_result.data else ""
                 conversations.append(conv)
 
             _send_json_response(self, 200, conversations)
