@@ -144,7 +144,7 @@ export default function AIChatPage() {
 
   return (
     <Layout title="聊天">
-      <div className="flex h-[calc(100vh-120px)] relative">
+      <div className="flex h-[calc(100dvh-80px)] relative">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Mobile: sidebar toggle button */}
