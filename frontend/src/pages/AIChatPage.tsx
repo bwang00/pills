@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import Layout from '../components/Layout';
+import ChatLayout from '../components/ChatLayout';
 import ConversationList from '../components/ConversationList';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 
@@ -142,20 +142,9 @@ export default function AIChatPage() {
     }
   };
 
-  const [chatHeight, setChatHeight] = useState('500px');
-
-  useEffect(() => {
-    const updateHeight = () => {
-      setChatHeight(`${window.innerHeight - 80}px`);
-    };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
-
   return (
-    <Layout title="聊天">
-      <div className="flex flex-col" style={{ height: chatHeight }}>
+    <ChatLayout>
+      <div className="flex flex-col h-full">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Mobile: sidebar toggle button */}
@@ -274,6 +263,6 @@ export default function AIChatPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </ChatLayout>
   );
 }
