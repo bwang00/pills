@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
@@ -7,6 +7,7 @@ import { useMuscleRelax } from '../hooks/useMuscleRelax';
 import { useAudio } from '../hooks/useAudio';
 import { useSession } from '../hooks/useSession';
 import type { Guide, MuscleRelaxConfig } from '../types';
+import type { MusclePhase } from '../hooks/useMuscleRelax';
 
 const bodyPartEmoji: Record<string, string> = {
   '额头': '🧠', '下巴': '😮', '肩膀': '💪', '手臂': '🤜',
@@ -32,8 +33,20 @@ export default function MuscleRelaxPage() {
   const { startSession, completeSession } = useSession(slug);
 
   const steps = (guide?.config as MuscleRelaxConfig)?.steps || [];
-  const { state, currentStepIndex, phase, timeRemaining, progress, start, stop } = useMuscleRelax(steps);
-  const { playBell, unlockAudio } = useAudio();
+  const { playBell, unlockAudio, startOceanMusic, stopOceanMusic, playMrVoice, playVoice } = useAudio();
+
+  const handlePhaseChange = useCallback((phase: MusclePhase, stepIndex: number) => {
+    if (phase === 'tense' && stepIndex >= 0) {
+      playMrVoice('tense', steps[stepIndex]?.body_part || '');
+    } else if (phase === 'relax' && stepIndex >= 0) {
+      playMrVoice('relax', steps[stepIndex]?.body_part || '');
+    } else if (phase === 'completed') {
+      playBell();
+      playVoice('finish');
+    }
+  }, [playMrVoice, playBell, playVoice, steps]);
+
+  const { state, currentStepIndex, phase, timeRemaining, progress, start, stop } = useMuscleRelax(steps, { onPhaseChange: handlePhaseChange });
   const currentStep = steps[currentStepIndex];
 
   useEffect(() => {
@@ -51,15 +64,23 @@ export default function MuscleRelaxPage() {
     await unlockAudio();
     setShowIntro(false);
     await startSession();
+    startOceanMusic();
     playBell();
+    playVoice('start');
     start();
+  };
+
+  const handleStop = () => {
+    stopOceanMusic();
+    stop();
   };
 
   useEffect(() => {
     if (state === 'completed') {
+      stopOceanMusic();
       completeSession();
     }
-  }, [state, completeSession]);
+  }, [state, completeSession, stopOceanMusic]);
 
   if (!guide) return <Layout title="加载中…"><div className="text-center text-calm-400 py-16">加载中…</div></Layout>;
   const estimatedMins = Math.ceil(steps.reduce((s, st) => s + st.tense_duration + st.relax_duration + 3, 0) / 60);
@@ -145,7 +166,7 @@ export default function MuscleRelaxPage() {
             ))}
           </div>
           <div className="flex justify-center">
-            <button onClick={stop} className="rounded-full border border-calm-300 text-calm-600 px-8 py-3">结束练习</button>
+            <button onClick={handleStop} className="rounded-full border border-calm-300 text-calm-600 px-8 py-3">结束练习</button>
           </div>
         </div>
       )}
