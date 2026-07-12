@@ -28,14 +28,6 @@ export default function AIChatPage() {
     }
   }, []);
 
-  const handleLogin = (name: string) => {
-    setUsername(name);
-  };
-
-  if (!username) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
-
   const handleVoiceResult = (text: string) => {
     if (text.trim()) {
       setInput(text.trim());
@@ -57,6 +49,14 @@ export default function AIChatPage() {
       }
     };
   }, [conversationId, messages]);
+
+  const handleLogin = (name: string) => {
+    setUsername(name);
+  };
+
+  if (!username) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   const handleNewConversation = async () => {
     // Extract tags for current conversation before creating new one
