@@ -21,10 +21,22 @@ export default function AIChatPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check for stored username on mount
     const stored = localStorage.getItem('pills_username');
     if (stored) {
       setUsername(stored);
+      // Auto-load the most recent conversation
+      fetch(`/api/conversations?username=${encodeURIComponent(stored)}`)
+        .then(r => r.json())
+        .then(async (convs) => {
+          if (convs.length > 0) {
+            const latest = convs[0];
+            const res = await fetch(`/api/conversations/${latest.id}`);
+            const data = await res.json();
+            setConversationId(latest.id);
+            setMessages(data.messages.map((m: any) => ({ role: m.role, content: m.content })));
+          }
+        })
+        .catch(err => console.error('Failed to auto-load conversation:', err));
     }
   }, []);
 
@@ -144,7 +156,7 @@ export default function AIChatPage() {
       // Save assistant message
       if (currentConvId) {
         try {
-          await fetch(`/api/conversations/${currentConvId}/messages`, {
+          await fetch(`/api/conversations/messages?conversation_id=${currentConvId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role: 'assistant', content: replyContent }),
