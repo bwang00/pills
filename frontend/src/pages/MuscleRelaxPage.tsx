@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import AICoach from '../components/AICoach';
 import StepTimer from '../components/StepTimer';
 import BodyMap from '../components/BodyMap';
+import ProgressBar from '../components/ProgressBar';
 import { useMuscleRelax } from '../hooks/useMuscleRelax';
 import { useAudio } from '../hooks/useAudio';
 import { useSession } from '../hooks/useSession';
@@ -115,7 +116,7 @@ export default function MuscleRelaxPage() {
 
       {state === 'running' && currentStep && (
         <div className="text-center py-4 animate-fade-in">
-          <p className="text-calm-400 text-sm mb-4">{currentStepIndex + 1} / {steps.length}</p>
+          <ProgressBar steps={steps} currentStepIndex={currentStepIndex} phase={phase} />
           <BodyMap currentBodyPart={currentStep.body_part} phase={phase} />
           <h2 className="text-2xl font-bold text-calm-800 mb-1">{bodyPartEmoji[currentStep.body_part] || '✨'} {currentStep.body_part}</h2>
           <p className="text-calm-600 text-lg mb-3">{phase === 'tense' ? currentStep.tense_prompt : currentStep.relax_prompt}</p>
