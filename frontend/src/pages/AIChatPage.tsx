@@ -35,7 +35,7 @@ export default function AIChatPage() {
   useEffect(() => {
     return () => {
       if (conversationId && messages.length > 1) {
-        navigator.sendBeacon(`/api/conversations/${conversationId}/extract-tags`);
+        navigator.sendBeacon(`/api/conversations/extract-tags?conversation_id=${conversationId}`);
       }
     };
   }, [conversationId, messages]);
@@ -44,7 +44,7 @@ export default function AIChatPage() {
     // Extract tags for current conversation before creating new one
     if (conversationId && messages.length > 1) {
       try {
-        await fetch(`/api/conversations/${conversationId}/extract-tags`, { method: 'POST' });
+        await fetch(`/api/conversations/extract-tags?conversation_id=${conversationId}`, { method: 'POST' });
       } catch (e) {
         console.error('Failed to extract tags:', e);
       }
@@ -60,7 +60,7 @@ export default function AIChatPage() {
     // Extract tags for current conversation before loading new one
     if (conversationId && messages.length > 1) {
       try {
-        await fetch(`/api/conversations/${conversationId}/extract-tags`, { method: 'POST' });
+        await fetch(`/api/conversations/extract-tags?conversation_id=${conversationId}`, { method: 'POST' });
       } catch (e) {
         console.error('Failed to extract tags:', e);
       }
@@ -102,7 +102,7 @@ export default function AIChatPage() {
     // Save user message
     if (currentConvId) {
       try {
-        await fetch(`/api/conversations/${currentConvId}/messages`, {
+        await fetch(`/api/conversations/messages?conversation_id=${currentConvId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ role: 'user', content: userMsg.content }),

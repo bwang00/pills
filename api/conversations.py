@@ -58,12 +58,15 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Handle POST requests."""
-        if self.path == "/api/conversations":
+        parsed = urlparse(self.path)
+        path = parsed.path
+        
+        if path == "/api/conversations":
             self._create_conversation()
-        elif self.path.startswith("/api/conversations/") and self.path.endswith("/messages"):
-            self._save_message()
-        elif self.path.startswith("/api/conversations/") and self.path.endswith("/extract-tags"):
-            self._extract_tags()
+        elif path == "/api/conversations/messages":
+            self._save_message(parsed.query)
+        elif path == "/api/conversations/extract-tags":
+            self._extract_tags(parsed.query)
         else:
             _send_error_response(self, 404, "Not found")
 
@@ -119,16 +122,15 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             _send_error_response(self, 500, str(e))
 
-    def _save_message(self):
+    def _save_message(self, query_string: str = ""):
         """Save a message to a conversation."""
-        # Extract conversation_id from path: /api/conversations/:id/messages
-        parts = self.path.split("/")
-        # ['', 'api', 'conversations', ':id', 'messages']
-        if len(parts) != 5 or parts[4] != "messages":
-            _send_error_response(self, 400, "Invalid path")
+        # Extract conversation_id from query string
+        params = parse_qs(query_string)
+        conversation_id = params.get("conversation_id", [None])[0]
+        
+        if not conversation_id:
+            _send_error_response(self, 400, "Missing conversation_id parameter")
             return
-
-        conversation_id = parts[3]
 
         # Validate UUID
         if not _validate_uuid(conversation_id):
@@ -253,17 +255,16 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             _send_error_response(self, 500, str(e))
 
-    def _extract_tags(self):
+    def _extract_tags(self, query_string: str = ""):
         """Extract tags from a conversation using Qwen API."""
-        # Extract conversation_id from path: /api/conversations/:id/extract-tags
-        parts = self.path.split("/")
-        # ['', 'api', 'conversations', ':id', 'extract-tags']
-        if len(parts) != 5 or parts[4] != "extract-tags":
-            _send_error_response(self, 400, "Invalid path")
+        # Extract conversation_id from query string
+        params = parse_qs(query_string)
+        conversation_id = params.get("conversation_id", [None])[0]
+        
+        if not conversation_id:
+            _send_error_response(self, 400, "Missing conversation_id parameter")
             return
-
-        conversation_id = parts[3]
-
+        
         # Validate UUID
         if not _validate_uuid(conversation_id):
             _send_error_response(self, 400, "Invalid conversation ID")
