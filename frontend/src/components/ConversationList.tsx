@@ -148,7 +148,8 @@ export default function ConversationList({
 
   return (
     <div className="h-full flex flex-col bg-white border-l border-calm-200">
-      <div className="p-4 border-b border-calm-200">
+      {/* Header */}
+      <div className="flex-shrink-0 p-4 border-b border-calm-200">
         <div className="flex gap-2">
           <button
             onClick={onNewConversation}
@@ -171,7 +172,7 @@ export default function ConversationList({
 
       {/* Tags Section */}
       {tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 border-b border-calm-100">
+        <div className="flex-shrink-0 flex flex-wrap gap-2 p-3 border-b border-calm-100">
           {tags.map(t => (
             <button
               key={t.tag}
@@ -188,7 +189,8 @@ export default function ConversationList({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Conversation List */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="p-4 text-center text-calm-400">加载中...</div>
         ) : conversations.length === 0 ? (
@@ -243,9 +245,10 @@ export default function ConversationList({
           </div>
         )}
       </div>
+
       {/* Batch delete bar */}
       {selectMode && checkedIds.size > 0 && (
-        <div className="p-3 border-t border-calm-200 bg-white flex items-center justify-between">
+        <div className="flex-shrink-0 p-3 border-t border-calm-200 bg-white flex items-center justify-between">
           <button
             onClick={toggleSelectAll}
             className="text-sm text-calm-500 hover:text-calm-700"
