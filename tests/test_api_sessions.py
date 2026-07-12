@@ -52,8 +52,8 @@ def test_create_session():
     assert result["id"] == "abc-123"
 
 def test_update_session():
-    result = _call_handler(make_mock_client([{"id": "abc-123"}]), "PATCH", "/api/sessions?id=abc-123", {"completed_at": "2026-01-01T00:05:00Z", "duration_seconds": 300, "notes": []})
-    assert result["id"] == "abc-123"
+    result = _call_handler(make_mock_client([{"id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"}]), "PATCH", "/api/sessions?id=a1b2c3d4-e5f6-7890-abcd-ef1234567890", {"completed_at": "2026-01-01T00:05:00Z", "duration_seconds": 300, "notes": []})
+    assert result["id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
 def test_get_sessions():
     mock = make_mock_client([
