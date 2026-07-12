@@ -236,14 +236,14 @@ export default function AIChatPage() {
 
       {/* Mobile: Slide-over sidebar */}
       {showSidebar && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-x-0 top-0 bottom-0 z-50 md:hidden h-[100dvh]">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/30"
             onClick={() => setShowSidebar(false)}
           />
           {/* Sidebar panel */}
-          <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl flex flex-col">
+          <div className="absolute right-0 top-0 w-80 max-w-[85vw] bg-white shadow-xl flex flex-col h-[100dvh]">
             <div className="flex items-center justify-between p-3 border-b border-calm-100 flex-shrink-0">
               <span className="text-calm-700 font-medium text-sm">历史对话</span>
               <button
