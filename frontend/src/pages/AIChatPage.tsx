@@ -1,18 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  recommendedGuide?: string;
 }
 
 export default function AIChatPage() {
-  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: '你好，我是 Pills AI 助手。告诉我你现在的感受，我会为你推荐合适的放松方式。' },
+    { role: 'assistant', content: '嘿，最近怎么样？想聊点什么吗？' },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,17 +44,16 @@ export default function AIChatPage() {
       });
       const data = await res.json();
       const replyContent = data.reply || '';
-      const recommendedSlug = data.recommended_guide;
-      setMessages([...newMessages, { role: 'assistant', content: replyContent, recommendedGuide: recommendedSlug || undefined }]);
+      setMessages([...newMessages, { role: 'assistant', content: replyContent }]);
     } catch {
-      setMessages([...newMessages, { role: 'assistant', content: '抱歉，我暂时无法回复。请稍后再试。' }]);
+      setMessages([...newMessages, { role: 'assistant', content: '抱歉，我这边暂时有点问题。你能再说一次吗？' }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Layout title="AI 对话">
+    <Layout title="聊天">
       <div className="flex flex-col h-[calc(100vh-120px)]">
         {/* Chat messages */}
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -69,15 +65,6 @@ export default function AIChatPage() {
                   : 'bg-white border border-calm-100 text-calm-800 rounded-bl-sm'
               }`}>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                {/* Guide recommendation link */}
-                {msg.role === 'assistant' && msg.recommendedGuide && (
-                  <button
-                    onClick={() => navigate(`/guide/${msg.recommendedGuide}`)}
-                    className="mt-2 text-calm-500 underline text-sm"
-                  >
-                    点击开始引导
-                  </button>
-                )}
               </div>
             </div>
           ))}
@@ -106,7 +93,7 @@ export default function AIChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder={isListening ? '正在听你说…' : '告诉我你现在的感受…'}
+            placeholder={isListening ? '正在听你说…' : '想聊点什么？'}
             className="flex-1 rounded-full border border-calm-200 px-4 py-3 text-calm-800 placeholder:text-calm-300 focus:outline-none focus:border-calm-400 transition-colors"
             disabled={loading || isListening}
           />
