@@ -115,7 +115,7 @@ def test_create_conversation_error():
 # =============================================================================
 
 def test_save_message():
-    """Test POST /api/conversations/:id/messages saves a message."""
+    """Test POST /api/conversations/messages saves a message."""
     conv_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     mock_message = {
         "id": "msg-uuid-456",
@@ -129,7 +129,7 @@ def test_save_message():
     body, status = _call_handler(
         mock_sb,
         "POST",
-        f"/api/conversations/{conv_id}/messages",
+        f"/api/conversations/messages?conversation_id={conv_id}",
         {"role": "user", "content": "Hello"}
     )
     
@@ -140,7 +140,7 @@ def test_save_message():
 
 
 def test_save_message_assistant_role():
-    """Test POST /api/conversations/:id/messages with assistant role."""
+    """Test POST /api/conversations/messages with assistant role."""
     conv_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     mock_message = {
         "id": "msg-uuid-789",
@@ -154,7 +154,7 @@ def test_save_message_assistant_role():
     body, status = _call_handler(
         mock_sb,
         "POST",
-        f"/api/conversations/{conv_id}/messages",
+        f"/api/conversations/messages?conversation_id={conv_id}",
         {"role": "assistant", "content": "Hi there!"}
     )
     
@@ -170,7 +170,7 @@ def test_save_message_invalid_role():
     body, status = _call_handler(
         mock_sb,
         "POST",
-        f"/api/conversations/{conv_id}/messages",
+        f"/api/conversations/messages?conversation_id={conv_id}",
         {"role": "invalid", "content": "Hello"}
     )
     
@@ -186,7 +186,7 @@ def test_save_message_missing_fields():
     body, status = _call_handler(
         mock_sb,
         "POST",
-        f"/api/conversations/{conv_id}/messages",
+        f"/api/conversations/messages?conversation_id={conv_id}",
         {"role": "user"}  # missing content
     )
     
@@ -201,7 +201,7 @@ def test_save_message_invalid_uuid():
     body, status = _call_handler(
         mock_sb,
         "POST",
-        "/api/conversations/invalid-uuid/messages",
+        "/api/conversations/messages?conversation_id=invalid-uuid",
         {"role": "user", "content": "Hello"}
     )
     
@@ -236,24 +236,20 @@ def test_list_conversations():
     conv_chain.order.return_value = conv_chain
     conv_chain.execute.return_value = FakeResponse(mock_conversations)
     
-    # Setup message count query chain (separate for each conversation)
-    msg_chain1 = MagicMock()
-    msg_chain1.select.return_value = msg_chain1
-    msg_chain1.eq.return_value = msg_chain1
-    msg_chain1.execute.return_value = FakeResponse([], count=5)
-    
-    msg_chain2 = MagicMock()
-    msg_chain2.select.return_value = msg_chain2
-    msg_chain2.eq.return_value = msg_chain2
-    msg_chain2.execute.return_value = FakeResponse([], count=3)
+    # Setup message query chain (with limit for first_message and count)
+    msg_chain = MagicMock()
+    msg_chain.select.return_value = msg_chain
+    msg_chain.eq.return_value = msg_chain
+    msg_chain.order.return_value = msg_chain
+    msg_chain.limit.return_value = msg_chain
+    msg_chain.execute.return_value = FakeResponse([{"id": "m1", "content": "hello"}], count=5)
     
     # Configure table() to return appropriate chains
     def table_side_effect(table_name):
         if table_name == "conversations":
             return conv_chain
         elif table_name == "conversation_messages":
-            # Return different chains for message count queries
-            return MagicMock(select=MagicMock(return_value=MagicMock(eq=MagicMock(return_value=MagicMock(execute=MagicMock(return_value=FakeResponse([], count=5)))))))
+            return msg_chain
         return conv_chain
     
     mock_sb.table.side_effect = table_side_effect
@@ -428,7 +424,7 @@ def test_options_preflight():
 # =============================================================================
 
 def test_extract_tags():
-    """Test POST /api/conversations/:id/extract-tags extracts and saves tags."""
+    """Test POST /api/conversations/extract-tags extracts and saves tags."""
     conv_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     mock_messages = [
         {"id": "msg-1", "conversation_id": conv_id, "role": "user", "content": "工作压力好大", "created_at": "2026-07-12T12:01:00Z"},
@@ -467,9 +463,9 @@ def test_extract_tags():
     with patch("api.conversations.call_qwen", return_value='["工作压力", "心理健康"]'):
         with patch("api.conversations.db.admin_client", return_value=mock_sb):
             h = handler.__new__(handler)
-            h.path = f"/api/conversations/{conv_id}/extract-tags"
+            h.path = f"/api/conversations/extract-tags?conversation_id={conv_id}"
             h.command = "POST"
-            h.requestline = f"POST /api/conversations/{conv_id}/extract-tags HTTP/1.1"
+            h.requestline = f"POST /api/conversations/extract-tags?conversation_id={conv_id} HTTP/1.1"
             h.request_version = "HTTP/1.1"
             h.close_connection = True
             h._headers_buffer = []
@@ -502,17 +498,17 @@ def test_extract_tags_empty_messages():
     mock_sb.table.return_value = msg_chain
     
     with patch("api.conversations.db.admin_client", return_value=mock_sb):
-        body, status = _call_handler(mock_sb, "POST", f"/api/conversations/{conv_id}/extract-tags")
+        body, status = _call_handler(mock_sb, "POST", f"/api/conversations/extract-tags?conversation_id={conv_id}")
         
         assert status == 200
         assert body["tags"] == []
 
 
 def test_extract_tags_invalid_uuid():
-    """Test POST /api/conversations/:id/extract-tags with invalid UUID."""
+    """Test POST /api/conversations/extract-tags with invalid UUID."""
     mock_sb = make_mock_client()
     
-    body, status = _call_handler(mock_sb, "POST", "/api/conversations/invalid-uuid/extract-tags")
+    body, status = _call_handler(mock_sb, "POST", "/api/conversations/extract-tags?conversation_id=invalid-uuid")
     
     assert status == 400
     assert "error" in body
@@ -599,11 +595,13 @@ def test_list_conversations_with_tag_filter():
     conv_chain.order.return_value = conv_chain
     conv_chain.execute.return_value = FakeResponse(mock_conversations)
     
-    # Setup message count
+    # Setup message query chain (with limit for first_message and count)
     msg_chain = MagicMock()
     msg_chain.select.return_value = msg_chain
     msg_chain.eq.return_value = msg_chain
-    msg_chain.execute.return_value = FakeResponse([], count=5)
+    msg_chain.order.return_value = msg_chain
+    msg_chain.limit.return_value = msg_chain
+    msg_chain.execute.return_value = FakeResponse([{"id": "m1", "content": "hello"}], count=5)
     
     def table_side_effect(table_name):
         if table_name == "conversation_tags":
