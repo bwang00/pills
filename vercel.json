@@ -12,6 +12,14 @@
   },
   "rewrites": [
     {
+      "source": "/api/conversations/:path*",
+      "destination": "/api/conversations.py"
+    },
+    {
+      "source": "/api/tags",
+      "destination": "/api/conversations.py"
+    },
+    {
       "source": "/((?!api).*)",
       "destination": "/index.html"
     }
