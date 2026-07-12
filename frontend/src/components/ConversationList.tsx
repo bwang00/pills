@@ -28,6 +28,8 @@ export default function ConversationList({
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectMode, setSelectMode] = useState(false);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchTags();
@@ -101,15 +103,70 @@ export default function ConversationList({
     }
   };
 
+  const toggleCheck = (id: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (checkedIds.size === conversations.length) {
+      setCheckedIds(new Set());
+    } else {
+      setCheckedIds(new Set(conversations.map(c => c.id)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (checkedIds.size === 0) return;
+    if (!confirm(`确定要删除选中的 ${checkedIds.size} 个对话吗？`)) return;
+
+    try {
+      await Promise.all(
+        Array.from(checkedIds).map(id =>
+          fetch(`/api/conversations/${id}`, { method: 'DELETE' })
+        )
+      );
+      setConversations(conversations.filter(c => !checkedIds.has(c.id)));
+      if (selectedConversationId && checkedIds.has(selectedConversationId)) {
+        onNewConversation();
+      }
+      setCheckedIds(new Set());
+      setSelectMode(false);
+    } catch (error) {
+      console.error('Failed to batch delete:', error);
+    }
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setCheckedIds(new Set());
+  };
+
   return (
     <div className="h-full flex flex-col bg-white border-l border-calm-200">
       <div className="p-4 border-b border-calm-200">
-        <button
-          onClick={onNewConversation}
-          className="w-full px-4 py-2 bg-calm-500 text-white rounded-lg hover:bg-calm-600 transition-colors"
-        >
-          新对话
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onNewConversation}
+            className="flex-1 px-4 py-2 bg-calm-500 text-white rounded-lg hover:bg-calm-600 transition-colors"
+          >
+            新对话
+          </button>
+          <button
+            onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
+            className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+              selectMode
+                ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                : 'bg-calm-100 text-calm-600 hover:bg-calm-200'
+            }`}
+          >
+            {selectMode ? '取消' : '管理'}
+          </button>
+        </div>
       </div>
 
       {/* Tags Section */}
@@ -143,32 +200,66 @@ export default function ConversationList({
             {conversations.map(conv => (
               <div
                 key={conv.id}
-                onClick={() => onSelectConversation(conv.id)}
-                className={`px-3 py-2.5 cursor-pointer hover:bg-calm-50 transition-colors ${
-                  selectedConversationId === conv.id ? 'bg-calm-100' : ''
+                onClick={() => selectMode ? toggleCheck(conv.id) : onSelectConversation(conv.id)}
+                className={`px-3 py-2.5 cursor-pointer hover:bg-calm-50 transition-colors flex items-center gap-2 ${
+                  selectedConversationId === conv.id && !selectMode ? 'bg-calm-100' : ''
                 }`}
               >
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-calm-400">
-                    {formatDate(conv.updated_at)}
-                  </span>
-                  <button
-                    onClick={(e) => handleDelete(e, conv.id)}
-                    className="text-calm-300 hover:text-red-400 text-xs ml-2"
-                  >
-                    ✕
-                  </button>
-                </div>
-                {conv.first_message && (
-                  <p className="text-sm text-calm-700 truncate leading-snug">
-                    {conv.first_message}
-                  </p>
+                {selectMode && (
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    checkedIds.has(conv.id)
+                      ? 'bg-calm-500 border-calm-500'
+                      : 'border-calm-300'
+                  }`}>
+                    {checkedIds.has(conv.id) && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
                 )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-calm-400">
+                      {formatDate(conv.updated_at)}
+                    </span>
+                    {!selectMode && (
+                      <button
+                        onClick={(e) => handleDelete(e, conv.id)}
+                        className="text-calm-300 hover:text-red-400 text-xs ml-2"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {conv.first_message && (
+                    <p className="text-sm text-calm-700 truncate leading-snug">
+                      {conv.first_message}
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      {/* Batch delete bar */}
+      {selectMode && checkedIds.size > 0 && (
+        <div className="p-3 border-t border-calm-200 bg-white flex items-center justify-between">
+          <button
+            onClick={toggleSelectAll}
+            className="text-sm text-calm-500 hover:text-calm-700"
+          >
+            {checkedIds.size === conversations.length ? '取消全选' : '全选'}
+          </button>
+          <button
+            onClick={handleBatchDelete}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+          >
+            删除 ({checkedIds.size})
+          </button>
+        </div>
+      )}
     </div>
   );
 }
