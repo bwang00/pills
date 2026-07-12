@@ -7,6 +7,11 @@ interface Conversation {
   message_count: number;
 }
 
+interface Tag {
+  tag: string;
+  count: number;
+}
+
 interface ConversationListProps {
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
@@ -19,21 +24,45 @@ export default function ConversationList({
   selectedConversationId,
 }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    fetchTags();
     fetchConversations();
   }, []);
 
-  const fetchConversations = async () => {
+  const fetchTags = async () => {
     try {
-      const response = await fetch('/api/conversations');
+      const res = await fetch('/api/tags');
+      const data = await res.json();
+      setTags(data);
+    } catch (error) {
+      console.error('Failed to fetch tags:', error);
+    }
+  };
+
+  const fetchConversations = async (tag?: string) => {
+    try {
+      const url = tag ? `/api/conversations?tag=${encodeURIComponent(tag)}` : '/api/conversations';
+      const response = await fetch(url);
       const data = await response.json();
       setConversations(data);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTagClick = (tag: string) => {
+    if (selectedTag === tag) {
+      setSelectedTag(null);
+      fetchConversations(); // 重新获取所有对话
+    } else {
+      setSelectedTag(tag);
+      fetchConversations(tag); // 按标签筛选
     }
   };
 
@@ -72,11 +101,32 @@ export default function ConversationList({
         </button>
       </div>
 
+      {/* Tags Section */}
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2 p-3 border-b border-calm-100">
+          {tags.map(t => (
+            <button
+              key={t.tag}
+              onClick={() => handleTagClick(t.tag)}
+              className={`px-2 py-1 rounded-full text-xs transition-colors ${
+                selectedTag === t.tag
+                  ? 'bg-calm-500 text-white'
+                  : 'bg-calm-100 text-calm-600 hover:bg-calm-200'
+              }`}
+            >
+              {t.tag} ({t.count})
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="p-4 text-center text-calm-400">加载中...</div>
         ) : conversations.length === 0 ? (
-          <div className="p-4 text-center text-calm-400">暂无对话记录</div>
+          <div className="p-4 text-center text-calm-400">
+            {selectedTag ? `没有包含"${selectedTag}"标签的对话` : '暂无对话记录'}
+          </div>
         ) : (
           <div className="divide-y divide-calm-100">
             {conversations.map(conv => (

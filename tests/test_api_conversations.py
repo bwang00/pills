@@ -421,3 +421,222 @@ def test_options_preflight():
         status = int(status_line.split(" ")[1])
         
         assert status == 200
+
+
+# =============================================================================
+# POST /api/conversations/:id/extract-tags - Extract Tags
+# =============================================================================
+
+def test_extract_tags():
+    """Test POST /api/conversations/:id/extract-tags extracts and saves tags."""
+    conv_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    mock_messages = [
+        {"id": "msg-1", "conversation_id": conv_id, "role": "user", "content": "工作压力好大", "created_at": "2026-07-12T12:01:00Z"},
+        {"id": "msg-2", "conversation_id": conv_id, "role": "assistant", "content": "理解你的感受", "created_at": "2026-07-12T12:02:00Z"}
+    ]
+    
+    mock_sb = MagicMock()
+    
+    # Setup messages fetch
+    msg_chain = MagicMock()
+    msg_chain.select.return_value = msg_chain
+    msg_chain.eq.return_value = msg_chain
+    msg_chain.order.return_value = msg_chain
+    msg_chain.execute.return_value = FakeResponse(mock_messages)
+    
+    # Setup tag delete
+    delete_chain = MagicMock()
+    delete_chain.delete.return_value = delete_chain
+    delete_chain.eq.return_value = delete_chain
+    delete_chain.execute.return_value = FakeResponse([])
+    
+    # Setup tag insert
+    insert_chain = MagicMock()
+    insert_chain.insert.return_value = insert_chain
+    insert_chain.execute.return_value = FakeResponse([{"id": "tag-1", "conversation_id": conv_id, "tag": "工作压力"}])
+    
+    def table_side_effect(table_name):
+        if table_name == "conversation_messages":
+            return msg_chain
+        elif table_name == "conversation_tags":
+            return delete_chain
+        return MagicMock()
+    
+    mock_sb.table.side_effect = table_side_effect
+    
+    with patch("api.conversations.call_qwen", return_value='["工作压力", "心理健康"]'):
+        with patch("api.conversations.db.admin_client", return_value=mock_sb):
+            h = handler.__new__(handler)
+            h.path = f"/api/conversations/{conv_id}/extract-tags"
+            h.command = "POST"
+            h.requestline = f"POST /api/conversations/{conv_id}/extract-tags HTTP/1.1"
+            h.request_version = "HTTP/1.1"
+            h.close_connection = True
+            h._headers_buffer = []
+            h.wfile = BytesIO()
+            h.client_address = ("127.0.0.1", 8080)
+            h.server = MagicMock()
+            h.headers = {"Content-Length": "0"}
+            h.rfile = BytesIO()
+            
+            h.do_POST()
+            
+            body, status = _extract_body(h.wfile), _get_status_code(h.wfile)
+            
+            assert status == 200
+            assert "tags" in body
+            assert body["tags"] == ["工作压力", "心理健康"]
+
+
+def test_extract_tags_empty_messages():
+    """Test POST /api/conversations/:id/extract-tags with no messages."""
+    conv_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    
+    mock_sb = MagicMock()
+    msg_chain = MagicMock()
+    msg_chain.select.return_value = msg_chain
+    msg_chain.eq.return_value = msg_chain
+    msg_chain.order.return_value = msg_chain
+    msg_chain.execute.return_value = FakeResponse([])
+    
+    mock_sb.table.return_value = msg_chain
+    
+    with patch("api.conversations.db.admin_client", return_value=mock_sb):
+        body, status = _call_handler(mock_sb, "POST", f"/api/conversations/{conv_id}/extract-tags")
+        
+        assert status == 200
+        assert body["tags"] == []
+
+
+def test_extract_tags_invalid_uuid():
+    """Test POST /api/conversations/:id/extract-tags with invalid UUID."""
+    mock_sb = make_mock_client()
+    
+    body, status = _call_handler(mock_sb, "POST", "/api/conversations/invalid-uuid/extract-tags")
+    
+    assert status == 400
+    assert "error" in body
+
+
+# =============================================================================
+# GET /api/tags - Get Aggregated Tags
+# =============================================================================
+
+def test_get_tags():
+    """Test GET /api/tags returns aggregated tags sorted by count."""
+    mock_tags = [
+        {"tag": "工作压力"},
+        {"tag": "工作压力"},
+        {"tag": "人际关系"},
+        {"tag": "焦虑情绪"},
+        {"tag": "焦虑情绪"},
+        {"tag": "焦虑情绪"}
+    ]
+    
+    mock_sb = MagicMock()
+    tag_chain = MagicMock()
+    tag_chain.select.return_value = tag_chain
+    tag_chain.execute.return_value = FakeResponse(mock_tags)
+    
+    mock_sb.table.return_value = tag_chain
+    
+    body, status = _call_handler(mock_sb, "GET", "/api/tags")
+    
+    assert status == 200
+    assert isinstance(body, list)
+    assert len(body) == 3
+    assert body[0]["tag"] == "焦虑情绪"
+    assert body[0]["count"] == 3
+    assert body[1]["tag"] == "工作压力"
+    assert body[1]["count"] == 2
+    assert body[2]["tag"] == "人际关系"
+    assert body[2]["count"] == 1
+
+
+def test_get_tags_empty():
+    """Test GET /api/tags returns empty list when no tags."""
+    mock_sb = MagicMock()
+    tag_chain = MagicMock()
+    tag_chain.select.return_value = tag_chain
+    tag_chain.execute.return_value = FakeResponse([])
+    
+    mock_sb.table.return_value = tag_chain
+    
+    body, status = _call_handler(mock_sb, "GET", "/api/tags")
+    
+    assert status == 200
+    assert body == []
+
+
+# =============================================================================
+# GET /api/conversations?tag=xxx - Filter by Tag
+# =============================================================================
+
+def test_list_conversations_with_tag_filter():
+    """Test GET /api/conversations?tag=xxx filters by tag."""
+    mock_tag_result = [
+        {"conversation_id": "conv-1"},
+        {"conversation_id": "conv-3"}
+    ]
+    
+    mock_conversations = [
+        {"id": "conv-1", "created_at": "2026-07-12T10:00:00Z", "updated_at": "2026-07-12T12:00:00Z"},
+        {"id": "conv-2", "created_at": "2026-07-11T10:00:00Z", "updated_at": "2026-07-11T12:00:00Z"},
+        {"id": "conv-3", "created_at": "2026-07-10T10:00:00Z", "updated_at": "2026-07-10T12:00:00Z"}
+    ]
+    
+    mock_sb = MagicMock()
+    
+    # Setup tag query
+    tag_chain = MagicMock()
+    tag_chain.select.return_value = tag_chain
+    tag_chain.eq.return_value = tag_chain
+    tag_chain.execute.return_value = FakeResponse(mock_tag_result)
+    
+    # Setup conversations query
+    conv_chain = MagicMock()
+    conv_chain.select.return_value = conv_chain
+    conv_chain.order.return_value = conv_chain
+    conv_chain.execute.return_value = FakeResponse(mock_conversations)
+    
+    # Setup message count
+    msg_chain = MagicMock()
+    msg_chain.select.return_value = msg_chain
+    msg_chain.eq.return_value = msg_chain
+    msg_chain.execute.return_value = FakeResponse([], count=5)
+    
+    def table_side_effect(table_name):
+        if table_name == "conversation_tags":
+            return tag_chain
+        elif table_name == "conversations":
+            return conv_chain
+        elif table_name == "conversation_messages":
+            return msg_chain
+        return MagicMock()
+    
+    mock_sb.table.side_effect = table_side_effect
+    
+    body, status = _call_handler(mock_sb, "GET", "/api/conversations?tag=工作压力")
+    
+    assert status == 200
+    assert isinstance(body, list)
+    # Should only include conv-1 and conv-3
+    assert len(body) == 2
+    assert body[0]["id"] == "conv-1"
+    assert body[1]["id"] == "conv-3"
+
+
+def test_list_conversations_with_tag_no_matches():
+    """Test GET /api/conversations?tag=xxx returns empty when no matches."""
+    mock_sb = MagicMock()
+    tag_chain = MagicMock()
+    tag_chain.select.return_value = tag_chain
+    tag_chain.eq.return_value = tag_chain
+    tag_chain.execute.return_value = FakeResponse([])
+    
+    mock_sb.table.return_value = tag_chain
+    
+    body, status = _call_handler(mock_sb, "GET", "/api/conversations?tag=nonexistent")
+    
+    assert status == 200
+    assert body == []

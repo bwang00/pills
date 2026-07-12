@@ -30,7 +30,24 @@ export default function AIChatPage() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const handleNewConversation = () => {
+  // Extract tags when leaving the page or switching conversations
+  useEffect(() => {
+    return () => {
+      if (conversationId && messages.length > 1) {
+        navigator.sendBeacon(`/api/conversations/${conversationId}/extract-tags`);
+      }
+    };
+  }, [conversationId, messages]);
+
+  const handleNewConversation = async () => {
+    // Extract tags for current conversation before creating new one
+    if (conversationId && messages.length > 1) {
+      try {
+        await fetch(`/api/conversations/${conversationId}/extract-tags`, { method: 'POST' });
+      } catch (e) {
+        console.error('Failed to extract tags:', e);
+      }
+    }
     setConversationId(null);
     setMessages([
       { role: 'assistant', content: '嘿，最近怎么样？想聊点什么吗？' },
@@ -38,6 +55,15 @@ export default function AIChatPage() {
   };
 
   const handleSelectConversation = async (id: string) => {
+    // Extract tags for current conversation before loading new one
+    if (conversationId && messages.length > 1) {
+      try {
+        await fetch(`/api/conversations/${conversationId}/extract-tags`, { method: 'POST' });
+      } catch (e) {
+        console.error('Failed to extract tags:', e);
+      }
+    }
+    
     try {
       const response = await fetch(`/api/conversations/${id}`);
       const data = await response.json();
