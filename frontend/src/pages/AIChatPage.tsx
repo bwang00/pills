@@ -161,7 +161,7 @@ export default function AIChatPage() {
   };
 
   return (
-    <ChatLayout>
+    <ChatLayout username={username}>
       <div className="flex h-full">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
