@@ -18,6 +18,15 @@ export default {
           950: '#042f29',
         },
       },
+      animation: {
+        'pulse-glow': 'pulse-glow 1.5s ease-in-out infinite',
+      },
+      keyframes: {
+        'pulse-glow': {
+          '0%, 100%': { opacity: '0.8', transform: 'scale(1)' },
+          '50%': { opacity: '1', transform: 'scale(1.05)' },
+        },
+      },
     },
   },
   plugins: [],
