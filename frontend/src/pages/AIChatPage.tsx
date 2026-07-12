@@ -15,6 +15,7 @@ export default function AIChatPage() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const handleVoiceResult = (text: string) => {
@@ -52,6 +53,7 @@ export default function AIChatPage() {
     setMessages([
       { role: 'assistant', content: '嘿，最近怎么样？想聊点什么吗？' },
     ]);
+    setShowSidebar(false);
   };
 
   const handleSelectConversation = async (id: string) => {
@@ -72,6 +74,7 @@ export default function AIChatPage() {
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
+    setShowSidebar(false);
   };
 
   const sendMessage = async () => {
@@ -141,9 +144,22 @@ export default function AIChatPage() {
 
   return (
     <Layout title="聊天">
-      <div className="flex h-[calc(100vh-120px)]">
-        {/* Left: Conversation Area (70%) */}
-        <div className="w-7/10 flex flex-col">
+      <div className="flex h-[calc(100vh-120px)] relative">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Mobile: sidebar toggle button */}
+          <div className="flex items-center justify-between px-4 py-2 border-b border-calm-100 md:hidden">
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="flex items-center gap-2 text-calm-600 text-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M3 6.75A.75.75 0 013.75 6h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 6.75zM3 12a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 12zm0 5.25a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+              </svg>
+              历史对话
+            </button>
+          </div>
+
           <div className="flex-1 overflow-y-auto space-y-4 py-4 px-4">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -208,14 +224,44 @@ export default function AIChatPage() {
           </div>
         </div>
 
-        {/* Right: Conversation List (30%) */}
-        <div className="w-3/10">
+        {/* Desktop: Right sidebar (30%) */}
+        <div className="hidden md:block w-80 flex-shrink-0">
           <ConversationList
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}
             selectedConversationId={conversationId}
           />
         </div>
+
+        {/* Mobile: Slide-over sidebar */}
+        {showSidebar && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setShowSidebar(false)}
+            />
+            {/* Sidebar panel */}
+            <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl">
+              <div className="flex items-center justify-between p-3 border-b border-calm-100">
+                <span className="text-calm-700 font-medium text-sm">历史对话</span>
+                <button
+                  onClick={() => setShowSidebar(false)}
+                  className="text-calm-400 hover:text-calm-600"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              <ConversationList
+                onSelectConversation={handleSelectConversation}
+                onNewConversation={handleNewConversation}
+                selectedConversationId={conversationId}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
