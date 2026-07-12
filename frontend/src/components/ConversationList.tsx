@@ -147,7 +147,7 @@ export default function ConversationList({
   };
 
   return (
-    <div className="flex flex-col bg-white border-l border-calm-200 h-full">
+    <div className="flex flex-col bg-white border-l border-calm-200 flex-1 min-h-0">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-calm-200">
         <div className="flex gap-2">
