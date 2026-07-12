@@ -256,11 +256,13 @@ export default function AIChatPage() {
               </button>
             </div>
             <div className="flex-1 min-h-0 flex flex-col">
-              <ConversationList
-                onSelectConversation={handleSelectConversation}
-                onNewConversation={handleNewConversation}
-                selectedConversationId={conversationId}
-              />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <ConversationList
+                  onSelectConversation={handleSelectConversation}
+                  onNewConversation={handleNewConversation}
+                  selectedConversationId={conversationId}
+                />
+              </div>
             </div>
           </div>
         </div>
