@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface UseVoiceInputReturn {
   isListening: boolean;
@@ -22,6 +22,9 @@ export function useVoiceInput(onResult?: (text: string) => void): UseVoiceInputR
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState('');
   const recognitionRef = useRef<any>(null);
+  // Use a ref for the callback to avoid stale closure / re-creation issues
+  const onResultRef = useRef(onResult);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
 
   const supported = typeof window !== 'undefined' && !!(
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -75,14 +78,14 @@ export function useVoiceInput(onResult?: (text: string) => void): UseVoiceInputR
       }
       const text = finalTranscript || interimTranscript;
       setTranscript(text);
-      if (finalTranscript && onResult) {
-        onResult(finalTranscript);
+      if (finalTranscript && onResultRef.current) {
+        onResultRef.current(finalTranscript);
       }
     };
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [supported, onResult]);
+  }, [supported]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {

@@ -14,9 +14,12 @@ import sys
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from lib.cors import send_cors_headers  # noqa: E402
 
 # Best Chinese female voice - warm, natural, calming
 VOICE = "zh-CN-XiaoxiaoNeural"
+MAX_TEXT_LENGTH = 500
+MAX_PAYLOAD_BYTES = 10_000
 
 
 def _generate_tts(text: str) -> bytes:
@@ -34,49 +37,51 @@ def _generate_tts(text: str) -> bytes:
     return asyncio.run(_gen())
 
 
-def _cors_headers(h: BaseHTTPRequestHandler):
-    h.send_header("Access-Control-Allow-Origin", "*")
-    h.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-    h.send_header("Access-Control-Allow-Headers", "Content-Type")
-
-
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
-        _cors_headers(self)
+        send_cors_headers(self, "POST, OPTIONS")
         self.end_headers()
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
+        if length > MAX_PAYLOAD_BYTES:
+            self.send_response(413)
+            self.send_header("Content-Type", "application/json")
+            send_cors_headers(self, "POST, OPTIONS")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Payload too large"}).encode())
+            return
+
         body = json.loads(self.rfile.read(length)) if length else {}
 
         text = body.get("text", "")
-        if not text:
+        if not text or not isinstance(text, str):
             self.send_response(400)
             self.send_header("Content-Type", "application/json")
-            _cors_headers(self)
+            send_cors_headers(self, "POST, OPTIONS")
             self.end_headers()
-            self.wfile.write(json.dumps({"error": "No text provided"}).encode())
+            self.wfile.write(json.dumps({"error": "text is required"}).encode())
             return
 
+        text = text[:MAX_TEXT_LENGTH]
+
         try:
-            audio_bytes = _generate_tts(text[:500])
+            audio_bytes = _generate_tts(text)
             audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
 
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            _cors_headers(self)
+            send_cors_headers(self, "POST, OPTIONS")
             self.end_headers()
             self.wfile.write(json.dumps({
                 "audio_data": audio_b64,
                 "format": "mp3",
                 "size": len(audio_bytes),
             }).encode())
-        except Exception as e:
+        except Exception:
             self.send_response(500)
             self.send_header("Content-Type", "application/json")
-            _cors_headers(self)
+            send_cors_headers(self, "POST, OPTIONS")
             self.end_headers()
-            self.wfile.write(json.dumps({
-                "error": f"TTS generation failed: {str(e)[:100]}"
-            }, ensure_ascii=False).encode())
+            self.wfile.write(json.dumps({"error": "TTS generation failed"}, ensure_ascii=False).encode())

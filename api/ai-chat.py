@@ -7,10 +7,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from lib.cors import send_cors_headers  # noqa: E402
+from lib.qwen import call_qwen  # noqa: E402
 
 SYSTEM_PROMPT = """你是 Pills 的 AI 引导助手，专门帮助用户在焦虑时冷静下来。
 
@@ -35,67 +38,61 @@ SYSTEM_PROMPT = """你是 Pills 的 AI 引导助手，专门帮助用户在焦�
 如果推荐了某个引导，在回复末尾加上推荐标记，格式：[推荐:slug]
 """
 
-
-def _call_qwen(messages: list[dict]) -> str:
-    """Call Qwen API via DashScope."""
-    import urllib.request
-
-    api_key = os.environ.get("QWEN_API_KEY", "")
-    if not api_key:
-        return "抱歉，AI 服务暂时不可用。你可以先试试深呼吸或感官着陆引导。"
-
-    payload = json.dumps({
-        "model": "qwen3.7-plus",
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": 300,
-    }).encode()
-
-    req = urllib.request.Request(
-        "https://ws-os2hjo7wanzpcewt.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
-            return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        return f"AI 暂时遇到了问题，请先尝试其他引导方式。（{str(e)[:50]}）"
-
-
-def _cors_headers(h: BaseHTTPRequestHandler):
-    h.send_header("Access-Control-Allow-Origin", "*")
-    h.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-    h.send_header("Access-Control-Allow-Headers", "Content-Type")
+MAX_MESSAGE_LENGTH = 2000
+MAX_HISTORY_ITEMS = 10
 
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
-        _cors_headers(self)
+        send_cors_headers(self, "POST, OPTIONS")
         self.end_headers()
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
+        # Guard against oversized payloads (10KB limit)
+        if length > 10_000:
+            self.send_response(413)
+            self.send_header("Content-Type", "application/json")
+            send_cors_headers(self, "POST, OPTIONS")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Payload too large"}).encode())
+            return
+
         body = json.loads(self.rfile.read(length)) if length else {}
 
         user_message = body.get("message", "")
-        history = body.get("history", [])
+        if not user_message or not isinstance(user_message, str):
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
+            send_cors_headers(self, "POST, OPTIONS")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "message is required"}).encode())
+            return
+
+        # Truncate overly long messages
+        user_message = user_message[:MAX_MESSAGE_LENGTH]
+        history = body.get("history", [])[:MAX_HISTORY_ITEMS]
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        for msg in history[-10:]:
-            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+        for msg in history:
+            role = msg.get("role", "user")
+            if role not in ("user", "assistant", "system"):
+                role = "user"
+            content = str(msg.get("content", ""))[:MAX_MESSAGE_LENGTH]
+            messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": user_message})
 
-        reply = _call_qwen(messages)
+        try:
+            reply = call_qwen(messages)
+        except Exception:
+            reply = ""
+
+        if not reply:
+            reply = "抱歉，AI 服务暂时不可用。你可以先试试深呼吸或感官着陆引导。"
 
         recommended = None
         if "[推荐:" in reply:
-            import re
             match = re.search(r"\[推荐:([a-z0-9\-]+)\]", reply)
             if match:
                 recommended = match.group(1)
@@ -104,7 +101,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            _cors_headers(self)
+            send_cors_headers(self, "POST, OPTIONS")
             self.end_headers()
             self.wfile.write(json.dumps({
                 "reply": reply,
@@ -113,6 +110,6 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_response(500)
             self.send_header("Content-Type", "application/json")
-            _cors_headers(self)
+            send_cors_headers(self, "POST, OPTIONS")
             self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}, ensure_ascii=False).encode())
+            self.wfile.write(json.dumps({"error": "Internal server error"}, ensure_ascii=False).encode())

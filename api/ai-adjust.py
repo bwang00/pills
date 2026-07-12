@@ -11,6 +11,8 @@ import sys
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from lib.cors import send_cors_headers  # noqa: E402
+from lib.qwen import call_qwen  # noqa: E402
 
 ADJUST_PROMPT = """你是引导调整助手。用户正在进行一项放松引导练习，提供了反馈。
 
@@ -21,55 +23,31 @@ ADJUST_PROMPT = """你是引导调整助手。用户正在进行一项放松引�
 duration_modifier 含义：<1 加快节奏，>1 放慢节奏，1.0 不变。
 只回复JSON，不要其他文字。"""
 
-
-def _call_qwen(messages: list[dict]) -> str:
-    import urllib.request
-    api_key = os.environ.get("QWEN_API_KEY", "")
-    if not api_key:
-        return json.dumps({"suggestion": "继续按照你的节奏来", "adjustments": {"duration_modifier": 1.0}}, ensure_ascii=False)
-
-    payload = json.dumps({
-        "model": "qwen3.7-plus",
-        "messages": messages,
-        "temperature": 0.5,
-        "max_tokens": 200,
-    }).encode()
-
-    req = urllib.request.Request(
-        "https://ws-os2hjo7wanzpcewt.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-            return data["choices"][0]["message"]["content"]
-    except Exception:
-        return json.dumps({"suggestion": "继续按照你的节奏来", "adjustments": {"duration_modifier": 1.0}}, ensure_ascii=False)
-
-
-def _cors_headers(h: BaseHTTPRequestHandler):
-    h.send_header("Access-Control-Allow-Origin", "*")
-    h.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-    h.send_header("Access-Control-Allow-Headers", "Content-Type")
+DEFAULT_RESULT = {"suggestion": "继续按照你的节奏来", "adjustments": {"duration_modifier": 1.0}}
+MAX_INPUT_LENGTH = 500
 
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
-        _cors_headers(self)
+        send_cors_headers(self, "POST, OPTIONS")
         self.end_headers()
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
+        if length > 5_000:
+            self.send_response(413)
+            self.send_header("Content-Type", "application/json")
+            send_cors_headers(self, "POST, OPTIONS")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Payload too large"}).encode())
+            return
+
         body = json.loads(self.rfile.read(length)) if length else {}
 
-        guide_type = body.get("guide_type", "breathing")
-        user_input = body.get("user_input", "")
-        current_phase = body.get("current_phase", "")
+        guide_type = str(body.get("guide_type", "breathing"))[:50]
+        user_input = str(body.get("user_input", ""))[:MAX_INPUT_LENGTH]
+        current_phase = str(body.get("current_phase", ""))[:50]
 
         user_msg = f"引导类型: {guide_type}, 当前阶段: {current_phase}, 用户反馈: {user_input}"
         messages = [
@@ -77,21 +55,27 @@ class handler(BaseHTTPRequestHandler):
             {"role": "user", "content": user_msg},
         ]
 
-        raw = _call_qwen(messages)
         try:
+            raw = call_qwen(messages, temperature=0.5, max_tokens=200)
             result = json.loads(raw)
-        except json.JSONDecodeError:
-            result = {"suggestion": "继续按照你的节奏来", "adjustments": {"duration_modifier": 1.0}}
+            # Validate structure
+            if not isinstance(result.get("suggestion"), str):
+                result = DEFAULT_RESULT
+            modifier = result.get("adjustments", {}).get("duration_modifier", 1.0)
+            if not isinstance(modifier, (int, float)) or modifier < 0.5 or modifier > 2.0:
+                result["adjustments"] = {"duration_modifier": 1.0}
+        except (json.JSONDecodeError, Exception):
+            result = DEFAULT_RESULT
 
         try:
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            _cors_headers(self)
+            send_cors_headers(self, "POST, OPTIONS")
             self.end_headers()
             self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
-        except Exception as e:
+        except Exception:
             self.send_response(500)
             self.send_header("Content-Type", "application/json")
-            _cors_headers(self)
+            send_cors_headers(self, "POST, OPTIONS")
             self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}, ensure_ascii=False).encode())
+            self.wfile.write(json.dumps({"error": "Internal server error"}, ensure_ascii=False).encode())

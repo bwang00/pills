@@ -6,6 +6,7 @@ import { useVoiceInput } from '../hooks/useVoiceInput';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  recommendedGuide?: string;
 }
 
 export default function AIChatPage() {
@@ -45,7 +46,9 @@ export default function AIChatPage() {
         body: JSON.stringify({ message: userMsg.content, history: newMessages.slice(0, -1) }),
       });
       const data = await res.json();
-      setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+      const replyContent = data.reply || '';
+      const recommendedSlug = data.recommended_guide;
+      setMessages([...newMessages, { role: 'assistant', content: replyContent, recommendedGuide: recommendedSlug || undefined }]);
     } catch {
       setMessages([...newMessages, { role: 'assistant', content: '抱歉，我暂时无法回复。请稍后再试。' }]);
     } finally {
@@ -66,19 +69,10 @@ export default function AIChatPage() {
                   : 'bg-white border border-calm-100 text-calm-800 rounded-bl-sm'
               }`}>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                {/* Check for guide recommendation link */}
-                {msg.role === 'assistant' && msg.content.includes('[推荐:') && (
+                {/* Guide recommendation link */}
+                {msg.role === 'assistant' && msg.recommendedGuide && (
                   <button
-                    onClick={() => {
-                      const match = msg.content.match(/\[推荐:([^\]]+)\]/);
-                      if (match) {
-                        const slug = match[1];
-                        if (slug.startsWith('breathing')) navigate(`/guide/${slug}`);
-                        else if (slug.startsWith('grounding')) navigate(`/guide/${slug}`);
-                        else if (slug.startsWith('muscle')) navigate(`/guide/${slug}`);
-                        else if (slug.startsWith('mindfulness')) navigate(`/guide/${slug}`);
-                      }
-                    }}
+                    onClick={() => navigate(`/guide/${msg.recommendedGuide}`)}
                     className="mt-2 text-calm-500 underline text-sm"
                   >
                     点击开始引导

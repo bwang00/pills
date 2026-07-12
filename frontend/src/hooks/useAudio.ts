@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { setSharedAudioCtx } from './useSpeech';
 import promptMap from '../../public/audio/prompts/prompt-map.json';
 
@@ -31,6 +31,19 @@ export function useAudio() {
   const bgSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const bgGainRef = useRef<GainNode | null>(null);
   const promptSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      try { bgSourceRef.current?.stop(); } catch {}
+      try { promptSourceRef.current?.stop(); } catch {}
+      bgSourceRef.current = null;
+      promptSourceRef.current = null;
+      if (ctxRef.current && ctxRef.current.state !== 'closed') {
+        ctxRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
 
   const getCtx = useCallback(async () => {
     if (!ctxRef.current) {
