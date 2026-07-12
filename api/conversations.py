@@ -62,7 +62,7 @@ class handler(BaseHTTPRequestHandler):
         path = parsed.path
         
         if path == "/api/conversations":
-            self._create_conversation()
+            self._create_conversation(parsed.query)
         elif path == "/api/conversations/messages":
             self._save_message(parsed.query)
         elif path == "/api/conversations/extract-tags":
@@ -104,18 +104,25 @@ class handler(BaseHTTPRequestHandler):
         else:
             _send_error_response(self, 404, "Not found")
 
-    def _create_conversation(self):
+    def _create_conversation(self, query_string: str = ""):
         """Create a new conversation."""
+        params = parse_qs(query_string)
+        username = params.get("username", [None])[0]
+        
         try:
             db_client = db.admin_client()
-            result = db_client.table("conversations").insert({}).execute()
+            insert_data = {}
+            if username:
+                insert_data["username"] = username
+            result = db_client.table("conversations").insert(insert_data).execute()
 
             if result.data:
                 conversation = result.data[0]
                 _send_json_response(self, 201, {
                     "id": conversation["id"],
                     "created_at": conversation["created_at"],
-                    "updated_at": conversation["updated_at"]
+                    "updated_at": conversation["updated_at"],
+                    "username": conversation.get("username")
                 })
             else:
                 _send_error_response(self, 500, "Failed to create conversation")
@@ -172,13 +179,14 @@ class handler(BaseHTTPRequestHandler):
             _send_error_response(self, 500, str(e))
 
     def _list_conversations(self, query_string: str = ""):
-        """List all conversations with message count, ordered by updated_at DESC. Supports ?tag= filter."""
+        """List all conversations with message count, ordered by updated_at DESC. Supports ?tag= and ?username= filters."""
         try:
             db_client = db.admin_client()
             
-            # Parse query string for tag filter
+            # Parse query string for filters
             params = parse_qs(query_string)
             tag_filter = params.get("tag", [None])[0]
+            username_filter = params.get("username", [None])[0]
             
             conversation_ids = None
             if tag_filter:
@@ -192,7 +200,10 @@ class handler(BaseHTTPRequestHandler):
                     return
 
             # Get conversations ordered by updated_at DESC
-            result = db_client.table("conversations").select("*").order("updated_at", desc=True).execute()
+            query = db_client.table("conversations").select("*")
+            if username_filter:
+                query = query.eq("username", username_filter)
+            result = query.order("updated_at", desc=True).execute()
 
             conversations = []
             for conv in result.data or []:

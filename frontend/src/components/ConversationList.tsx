@@ -17,12 +17,14 @@ interface ConversationListProps {
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
   selectedConversationId: string | null;
+  username: string;
 }
 
 export default function ConversationList({
   onSelectConversation,
   onNewConversation,
   selectedConversationId,
+  username,
 }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -34,7 +36,7 @@ export default function ConversationList({
   useEffect(() => {
     fetchTags();
     fetchConversations();
-  }, []);
+  }, [username]);
 
   const fetchTags = async () => {
     try {
@@ -48,8 +50,9 @@ export default function ConversationList({
 
   const fetchConversations = async (tag?: string) => {
     try {
-      const url = tag ? `/api/conversations?tag=${encodeURIComponent(tag)}` : '/api/conversations';
-      const response = await fetch(url);
+      const params = new URLSearchParams({ username });
+      if (tag) params.set('tag', tag);
+      const response = await fetch(`/api/conversations?${params.toString()}`);
       const data = await response.json();
       // Limit to 20 conversations
       setConversations(data.slice(0, 20));

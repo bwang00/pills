@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import ChatLayout from '../components/ChatLayout';
 import ConversationList from '../components/ConversationList';
+import LoginScreen from '../components/LoginScreen';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 
 interface Message {
@@ -9,6 +10,7 @@ interface Message {
 }
 
 export default function AIChatPage() {
+  const [username, setUsername] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: '嘿，最近怎么样？想聊点什么吗？' },
@@ -17,6 +19,22 @@ export default function AIChatPage() {
   const [loading, setLoading] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Check for stored username on mount
+    const stored = localStorage.getItem('pills_username');
+    if (stored) {
+      setUsername(stored);
+    }
+  }, []);
+
+  const handleLogin = (name: string) => {
+    setUsername(name);
+  };
+
+  if (!username) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   const handleVoiceResult = (text: string) => {
     if (text.trim()) {
@@ -90,7 +108,7 @@ export default function AIChatPage() {
     let currentConvId = conversationId;
     if (!currentConvId) {
       try {
-        const response = await fetch('/api/conversations', { method: 'POST' });
+        const response = await fetch(`/api/conversations?username=${encodeURIComponent(username)}`, { method: 'POST' });
         const data = await response.json();
         currentConvId = data.id;
         setConversationId(currentConvId);
@@ -230,6 +248,7 @@ export default function AIChatPage() {
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}
             selectedConversationId={conversationId}
+            username={username}
           />
         </div>
       </div>
@@ -260,6 +279,7 @@ export default function AIChatPage() {
                 onSelectConversation={handleSelectConversation}
                 onNewConversation={handleNewConversation}
                 selectedConversationId={conversationId}
+                username={username}
               />
             </div>
           </div>
