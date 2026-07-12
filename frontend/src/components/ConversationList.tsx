@@ -147,7 +147,7 @@ export default function ConversationList({
   };
 
   return (
-    <div className="h-full flex flex-col bg-white border-l border-calm-200">
+    <div className="flex flex-col bg-white border-l border-calm-200">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-calm-200">
         <div className="flex gap-2">
@@ -190,7 +190,7 @@ export default function ConversationList({
       )}
 
       {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="p-4 text-center text-calm-400">加载中...</div>
         ) : conversations.length === 0 ? (
