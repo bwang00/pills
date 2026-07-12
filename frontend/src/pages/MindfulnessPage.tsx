@@ -5,14 +5,15 @@ import AICoach from '../components/AICoach';
 import StepTimer from '../components/StepTimer';
 import { useMeditation } from '../hooks/useMeditation';
 import { useAudio } from '../hooks/useAudio';
+import { useSession } from '../hooks/useSession';
 import type { Guide, MindfulnessConfig } from '../types';
 
 export default function MindfulnessPage() {
   const navigate = useNavigate();
   const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
+  const { startSession, completeSession } = useSession(slug);
   const { playBell, unlockAudio, startBgMusic, stopBgMusic, playPromptAudio } = useAudio();
 
   const config = guide ? (guide.config as MindfulnessConfig) : { duration_minutes: 5, prompts: [] };
@@ -32,23 +33,19 @@ export default function MindfulnessPage() {
   const handleStart = async () => {
     await unlockAudio();
     setShowIntro(false);
-    try {
-      const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
-      const data = await res.json(); setSessionId(data.id);
-    } catch {}
+    await startSession();
     startBgMusic('/audio/ambient-meditation.wav');
     playBell();
     start();
   };
 
   useEffect(() => {
-    if (state === 'completed' && sessionId) {
+    if (state === 'completed') {
       stopBgMusic();
-      fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed_at: new Date().toISOString(), duration_seconds: totalSeconds }) }).catch(() => {});
+      completeSession();
       playBell();
     }
-  }, [state, sessionId, totalSeconds, playBell, stopBgMusic]);
+  }, [state, completeSession, playBell, stopBgMusic]);
 
   useEffect(() => {
     if (state === 'idle') stopBgMusic();

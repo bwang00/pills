@@ -5,6 +5,7 @@ import AICoach from '../components/AICoach';
 import StepTimer from '../components/StepTimer';
 import { useMuscleRelax } from '../hooks/useMuscleRelax';
 import { useAudio } from '../hooks/useAudio';
+import { useSession } from '../hooks/useSession';
 import type { Guide, MuscleRelaxConfig } from '../types';
 
 const bodyPartEmoji: Record<string, string> = {
@@ -27,8 +28,8 @@ export default function MuscleRelaxPage() {
   const navigate = useNavigate();
   const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
+  const { startSession, completeSession } = useSession(slug);
 
   const steps = (guide?.config as MuscleRelaxConfig)?.steps || [];
   const { state, currentStepIndex, phase, timeRemaining, progress, start, stop } = useMuscleRelax(steps);
@@ -49,20 +50,16 @@ export default function MuscleRelaxPage() {
   const handleStart = async () => {
     await unlockAudio();
     setShowIntro(false);
-    try {
-      const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
-      const data = await res.json(); setSessionId(data.id);
-    } catch {}
+    await startSession();
     playBell();
     start();
   };
 
   useEffect(() => {
-    if (state === 'completed' && sessionId) {
-      fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed_at: new Date().toISOString() }) }).catch(() => {});
+    if (state === 'completed') {
+      completeSession();
     }
-  }, [state, sessionId]);
+  }, [state, completeSession]);
 
   if (!guide) return <Layout title="加载中…"><div className="text-center text-calm-400 py-16">加载中…</div></Layout>;
   const estimatedMins = Math.ceil(steps.reduce((s, st) => s + st.tense_duration + st.relax_duration + 3, 0) / 60);

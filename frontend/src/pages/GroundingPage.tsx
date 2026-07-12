@@ -6,6 +6,7 @@ import StepTimer from '../components/StepTimer';
 import GroundingStepCard from '../components/GroundingStep';
 import { useGrounding } from '../hooks/useGrounding';
 import { useAudio } from '../hooks/useAudio';
+import { useSession } from '../hooks/useSession';
 import type { Guide, GroundingConfig } from '../types';
 
 const senseIcons: Record<string, string> = { '看': '👁️', '触摸': '✋', '听': '👂', '闻': '👃', '尝': '👅' };
@@ -15,7 +16,7 @@ export default function GroundingPage() {
   const navigate = useNavigate();
   const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const { startSession, completeSession } = useSession(slug);
 
   const steps = (guide?.config as GroundingConfig)?.steps || [];
   const { state, currentStepIndex, entryCount, currentRound, notes, currentInput, start, setInput, addEntry, skipStep, stop, finish } = useGrounding(steps);
@@ -40,20 +41,16 @@ export default function GroundingPage() {
 
   const handleStart = async () => {
     await unlockAudio();
-    try {
-      const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
-      const data = await res.json(); setSessionId(data.id);
-    } catch {}
+    await startSession();
     playBell();
     start();
   };
 
   useEffect(() => {
-    if (state === 'completed' && sessionId) {
-      fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed_at: new Date().toISOString(), notes }) }).catch(() => {});
+    if (state === 'completed') {
+      completeSession();
     }
-  }, [state, sessionId, notes]);
+  }, [state, completeSession]);
 
   if (!guide) return <Layout title="加载中…"><div className="text-center text-calm-400 py-16">加载中…</div></Layout>;
   const totalSteps = steps.length;

@@ -5,14 +5,15 @@ import AICoach from '../components/AICoach';
 import StepTimer from '../components/StepTimer';
 import { useBreathing } from '../hooks/useBreathing';
 import { useAudio } from '../hooks/useAudio';
+import { useSession } from '../hooks/useSession';
 import type { Guide, BreathingConfig } from '../types';
 
 export default function BreathingPage() {
   const navigate = useNavigate();
   const { slug = '' } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<Guide | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const { startSession, completeSession } = useSession(slug);
 
   const phases = (guide?.config as BreathingConfig)?.phases || [];
   const { state, currentPhaseIndex, timeRemaining, progress, currentRound, start, pause, resume, stop, finish } = useBreathing(phases);
@@ -44,10 +45,7 @@ export default function BreathingPage() {
 
   const handleStart = async () => {
     await unlockAudio();
-    try {
-      const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guide_slug: slug }) });
-      const data = await res.json(); setSessionId(data.id);
-    } catch {}
+    await startSession();
     if (soundOn) startBgMusic();
     playBell();
     if (soundOn) playVoice('start');
@@ -55,15 +53,12 @@ export default function BreathingPage() {
   };
 
   useEffect(() => {
-    if (state === 'completed' && sessionId) {
+    if (state === 'completed') {
       stopBgMusic();
-      const cycleDuration = phases.reduce((s, p) => s + p.duration, 0);
-      const durationSecs = (currentRound - 1) * cycleDuration;
-      fetch(`/api/sessions?id=${sessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed_at: new Date().toISOString(), duration_seconds: durationSecs }) }).catch(() => {});
+      completeSession();
       if (soundOn) { playBell(); playVoice('finish'); }
     }
-  }, [state, sessionId, currentRound, phases, soundOn, playBell, playVoice, stopBgMusic]);
+  }, [state, completeSession, soundOn, playBell, playVoice, stopBgMusic]);
 
   // Stop bg music when exercise is stopped (back to idle)
   useEffect(() => {
