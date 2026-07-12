@@ -3,6 +3,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import GuidePage from './pages/GuidePage';
 import AIChatPage from './pages/AIChatPage';
+import HistoryPage from './pages/HistoryPage';
 import DebugPage from './pages/DebugPage';
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/guide/:slug" element={<GuidePage />} />
           <Route path="/ai-chat" element={<AIChatPage />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/debug" element={<DebugPage />} />
         </Routes>
       </BrowserRouter>

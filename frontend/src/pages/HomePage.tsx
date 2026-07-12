@@ -43,6 +43,13 @@ export default function HomePage() {
           )}
         </div>
       )}
+
+      {/* History link */}
+      <div className="text-center pt-4">
+        <Link to="/history" className="text-calm-400 text-sm hover:text-calm-600 transition-colors">
+          查看历史
+        </Link>
+      </div>
     </Layout>
   );
 }
