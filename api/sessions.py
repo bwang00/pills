@@ -126,3 +126,30 @@ class handler(BaseHTTPRequestHandler):
             send_cors_headers(self, "GET, POST, PATCH, OPTIONS")
             self.end_headers()
             self.wfile.write(json.dumps({"error": "Internal server error"}, ensure_ascii=False).encode())
+
+    def do_GET(self):
+        qs = parse_qs(urlparse(self.path).query)
+        try:
+            limit = min(max(int(qs.get("limit", ["50"])[0]), 1), 100)
+        except (ValueError, IndexError):
+            limit = 50
+        try:
+            offset = max(int(qs.get("offset", ["0"])[0]), 0)
+        except (ValueError, IndexError):
+            offset = 0
+
+        try:
+            sb = db.admin_client()
+            rows = sb.table("sessions").select("*").order("started_at", desc=True).range(offset, offset + limit - 1).execute()
+            data = rows.data or []
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            send_cors_headers(self)
+            self.end_headers()
+            self.wfile.write(json.dumps({"sessions": data, "total": len(data)}, ensure_ascii=False).encode())
+        except Exception:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            send_cors_headers(self)
+            self.end_headers()
+            self.wfile.write(json.dumps({"sessions": [], "total": 0}, ensure_ascii=False).encode())

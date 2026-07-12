@@ -44,6 +44,7 @@ def _call_handler(mock_sb, method, path, body=None):
             h.rfile = BytesIO()
         if method == "POST": h.do_POST()
         elif method == "PATCH": h.do_PATCH()
+        elif method == "GET": h.do_GET()
         return _extract_body(h.wfile)
 
 def test_create_session():
@@ -53,3 +54,30 @@ def test_create_session():
 def test_update_session():
     result = _call_handler(make_mock_client([{"id": "abc-123"}]), "PATCH", "/api/sessions?id=abc-123", {"completed_at": "2026-01-01T00:05:00Z", "duration_seconds": 300, "notes": []})
     assert result["id"] == "abc-123"
+
+def test_get_sessions():
+    mock = make_mock_client([
+        {"id": "s1", "guide_slug": "breathing-478", "started_at": "2026-07-12T09:00:00Z", "completed_at": "2026-07-12T09:05:00Z", "duration_seconds": 300},
+        {"id": "s2", "guide_slug": "grounding-54321", "started_at": "2026-07-12T08:00:00Z", "completed_at": None, "duration_seconds": None},
+    ])
+    mock.table.return_value.select.return_value = mock.table.return_value
+    mock.table.return_value.select.return_value.order.return_value = mock.table.return_value
+    mock.table.return_value.select.return_value.order.return_value.range.return_value = mock.table.return_value
+    mock.table.return_value.select.return_value.order.return_value.range.return_value.execute.return_value = FakeResponse([
+        {"id": "s1", "guide_slug": "breathing-478", "started_at": "2026-07-12T09:00:00Z", "completed_at": "2026-07-12T09:05:00Z", "duration_seconds": 300},
+        {"id": "s2", "guide_slug": "grounding-54321", "started_at": "2026-07-12T08:00:00Z", "completed_at": None, "duration_seconds": None},
+    ])
+    result = _call_handler(mock, "GET", "/api/sessions")
+    assert "sessions" in result
+    assert len(result["sessions"]) == 2
+    assert result["total"] == 2
+
+def test_get_sessions_default_limit():
+    mock = make_mock_client([])
+    mock.table.return_value.select.return_value = mock.table.return_value
+    mock.table.return_value.select.return_value.order.return_value = mock.table.return_value
+    mock.table.return_value.select.return_value.order.return_value.range.return_value = mock.table.return_value
+    mock.table.return_value.select.return_value.order.return_value.range.return_value.execute.return_value = FakeResponse([])
+    result = _call_handler(mock, "GET", "/api/sessions")
+    assert result["sessions"] == []
+    assert result["total"] == 0
