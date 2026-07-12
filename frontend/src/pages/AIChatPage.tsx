@@ -142,9 +142,20 @@ export default function AIChatPage() {
     }
   };
 
+  const [chatHeight, setChatHeight] = useState('500px');
+
+  useEffect(() => {
+    const updateHeight = () => {
+      setChatHeight(`${window.innerHeight - 80}px`);
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
+
   return (
     <Layout title="聊天">
-      <div className="flex flex-col" style={{ height: 'calc(100svh - 80px)' }}>
+      <div className="flex flex-col" style={{ height: chatHeight }}>
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Mobile: sidebar toggle button */}
