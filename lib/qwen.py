@@ -27,6 +27,6 @@ def call_qwen(messages: list[dict], temperature: float = 0.7, max_tokens: int = 
             "Authorization": f"Bearer {api_key}",
         },
     )
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read())
         return data["choices"][0]["message"]["content"]
