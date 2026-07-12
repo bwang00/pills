@@ -243,8 +243,8 @@ export default function AIChatPage() {
             onClick={() => setShowSidebar(false)}
           />
           {/* Sidebar panel */}
-          <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl">
-            <div className="flex items-center justify-between p-3 border-b border-calm-100">
+          <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl flex flex-col">
+            <div className="flex items-center justify-between p-3 border-b border-calm-100 flex-shrink-0">
               <span className="text-calm-700 font-medium text-sm">历史对话</span>
               <button
                 onClick={() => setShowSidebar(false)}
@@ -255,11 +255,13 @@ export default function AIChatPage() {
                 </svg>
               </button>
             </div>
-            <ConversationList
-              onSelectConversation={handleSelectConversation}
-              onNewConversation={handleNewConversation}
-              selectedConversationId={conversationId}
-            />
+            <div className="flex-1 min-h-0">
+              <ConversationList
+                onSelectConversation={handleSelectConversation}
+                onNewConversation={handleNewConversation}
+                selectedConversationId={conversationId}
+              />
+            </div>
           </div>
         </div>
       )}
