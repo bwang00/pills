@@ -8,6 +8,11 @@ html, body, #root {
   margin: 0;
 }
 
+/* Safe area padding for iOS bottom nav bar */
+.pb-safe {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* Breathing circle animation */
 @keyframes breathe-in {
   from { transform: scale(1); }

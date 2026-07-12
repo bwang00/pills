@@ -248,7 +248,7 @@ export default function ConversationList({
 
       {/* Batch delete bar */}
       {selectMode && checkedIds.size > 0 && (
-        <div className="flex-shrink-0 p-3 border-t border-calm-200 bg-white flex items-center justify-between">
+        <div className="flex-shrink-0 p-3 border-t border-calm-200 bg-white flex items-center justify-between pb-safe">
           <button
             onClick={toggleSelectAll}
             className="text-sm text-calm-500 hover:text-calm-700"
