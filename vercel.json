@@ -12,7 +12,7 @@
   },
   "rewrites": [
     {
-      "source": "/api/conversations/:path((?!messages|extract-tags).*)",
+      "source": "/api/conversations/:path((?!messages|extract-tags|extract-profile).*)",
       "destination": "/api/conversations.py"
     },
     {

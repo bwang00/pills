@@ -11,6 +11,7 @@ import sys
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from lib import db  # noqa: E402
 from lib.cors import send_cors_headers  # noqa: E402
 from lib.qwen import call_qwen  # noqa: E402
 
@@ -149,7 +150,22 @@ class handler(BaseHTTPRequestHandler):
         user_message = user_message[:MAX_MESSAGE_LENGTH]
         history = _truncate_history(body.get("history", []))
 
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        # Load user profile if username is provided
+        system_prompt = SYSTEM_PROMPT
+        username = body.get("username", "")
+        if username:
+            try:
+                db_client = db.admin_client()
+                profile_result = db_client.table("user_profiles").select("profile").eq("username", username).execute()
+                if profile_result.data:
+                    profile = profile_result.data[0].get("profile", {})
+                    if profile:
+                        profile_text = json.dumps(profile, ensure_ascii=False)
+                        system_prompt += f"\n\n## 关于这个用户的背景\n{profile_text}\n\n请参考以上背景信息来回应，但不要直接提及\"根据你的画像\"之类的话，自然地融入对话即可。"
+            except Exception:
+                pass  # Profile table may not exist yet
+
+        messages = [{"role": "system", "content": system_prompt}]
         for msg in history:
             role = msg.get("role", "user")
             if role not in ("user", "assistant", "system"):

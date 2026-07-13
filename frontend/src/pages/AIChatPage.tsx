@@ -53,14 +53,17 @@ export default function AIChatPage() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // Extract tags when leaving the page or switching conversations
+  // Extract tags and profile when leaving the page or switching conversations
   useEffect(() => {
     return () => {
       if (conversationId && messages.length > 1) {
         navigator.sendBeacon(`/api/conversations/extract-tags?conversation_id=${conversationId}`);
+        if (username) {
+          navigator.sendBeacon(`/api/conversations/extract-profile?conversation_id=${conversationId}&username=${encodeURIComponent(username)}`);
+        }
       }
     };
-  }, [conversationId, messages]);
+  }, [conversationId, messages, username]);
 
   const handleLogin = (name: string) => {
     setUsername(name);
@@ -71,12 +74,13 @@ export default function AIChatPage() {
   }
 
   const handleNewConversation = async () => {
-    // Extract tags for current conversation before creating new one
+    // Extract tags and profile for current conversation before creating new one
     if (conversationId && messages.length > 1) {
       try {
         await fetch(`/api/conversations/extract-tags?conversation_id=${conversationId}`, { method: 'POST' });
+        await fetch(`/api/conversations/extract-profile?conversation_id=${conversationId}&username=${encodeURIComponent(username)}`, { method: 'POST' });
       } catch (e) {
-        console.error('Failed to extract tags:', e);
+        console.error('Failed to extract tags/profile:', e);
       }
     }
     setConversationId(null);
@@ -87,12 +91,13 @@ export default function AIChatPage() {
   };
 
   const handleSelectConversation = async (id: string) => {
-    // Extract tags for current conversation before loading new one
+    // Extract tags and profile for current conversation before loading new one
     if (conversationId && messages.length > 1) {
       try {
         await fetch(`/api/conversations/extract-tags?conversation_id=${conversationId}`, { method: 'POST' });
+        await fetch(`/api/conversations/extract-profile?conversation_id=${conversationId}&username=${encodeURIComponent(username)}`, { method: 'POST' });
       } catch (e) {
-        console.error('Failed to extract tags:', e);
+        console.error('Failed to extract tags/profile:', e);
       }
     }
     
@@ -146,7 +151,7 @@ export default function AIChatPage() {
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg.content, history: newMessages.slice(0, -1) }),
+        body: JSON.stringify({ message: userMsg.content, history: newMessages.slice(0, -1), username }),
       });
       const data = await res.json();
       const replyContent = data.reply || '';
