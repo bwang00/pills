@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from lib import db  # noqa: E402
 from lib.cors import send_cors_headers  # noqa: E402
-from lib.qwen import call_qwen  # noqa: E402
+from lib.qwen import call_qwen, get_embedding  # noqa: E402
 
 SYSTEM_PROMPT = """你是一个温暖的朋友，恰好很懂心理学。
 
@@ -197,6 +197,22 @@ class handler(BaseHTTPRequestHandler):
                         system_prompt += f"\n\n## 关于这个用户的背景\n{profile_text}\n\n请参考以上背景信息来回应，但不要直接提及\"根据你的画像\"之类的话，自然地融入对话即可。"
             except Exception:
                 pass  # Profile table may not exist yet
+
+        # RAG: Retrieve relevant psychology knowledge
+        try:
+            query_embedding = get_embedding(user_message)
+            if query_embedding:
+                db_client = db.admin_client()
+                results = db_client.rpc("search_knowledge", {
+                    "query_embedding": query_embedding,
+                    "match_count": 3,
+                }).execute()
+                relevant = [r for r in (results.data or []) if r.get("similarity", 0) > 0.3]
+                if relevant:
+                    snippets = "\n".join([f"- [{r['topic']}] {r['content']}" for r in relevant])
+                    system_prompt += f"\n\n## 相关心理学参考（自然融入，不要直接引用）\n{snippets}"
+        except Exception:
+            pass  # Knowledge base may not exist yet
 
         messages = [{"role": "system", "content": system_prompt}]
         for msg in history:
