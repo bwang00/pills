@@ -118,6 +118,7 @@ SYSTEM_PROMPT = """你是一个温暖的朋友，恰好很懂心理学。
 **示例5 — 探索固有思维（阶段三）：**
 用户：我觉得我什么都做不好
 助手：你为什么会这么想呢？是最近发生了什么具体的事吗？
+"""
 
 MAX_MESSAGE_LENGTH = 2000
 # Send full conversation history, but cap at a reasonable limit
@@ -198,24 +199,25 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 pass  # Profile table may not exist yet
 
-        # RAG: Retrieve relevant psychology knowledge
+        # RAG: Retrieve relevant psychology knowledge via keyword matching
         try:
             db_client = db.admin_client()
             all_knowledge = db_client.table("knowledge_base").select("id, topic, category, content").execute()
             if all_knowledge.data:
-                # Build topic index for Qwen to select from
-                topic_list = "\n".join([f"{k['id']}|{k['category']}|{k['topic']}" for k in all_knowledge.data])
-                select_prompt = f"根据用户的消息，从以下心理学主题中选出最相关的3个（只返回ID，逗号分隔）：\n{topic_list}"
-                selected = call_qwen(
-                    messages=[
-                        {"role": "system", "content": "你是一个知识检索助手。根据用户消息选出最相关的主题ID。只返回ID，逗号分隔，不要其他文字。"},
-                        {"role": "user", "content": f"{select_prompt}\n\n用户消息：{user_message}"}
-                    ],
-                    temperature=0.1,
-                    max_tokens=100
-                )
-                selected_ids = [s.strip() for s in selected.split(",") if s.strip()]
-                relevant = [k for k in all_knowledge.data if k["id"] in selected_ids]
+                msg_lower = user_message.lower()
+                scored = []
+                for k in all_knowledge.data:
+                    score = 0
+                    for word in k["topic"].replace("与", " ").replace("-", " ").split():
+                        if len(word) >= 2 and word in msg_lower:
+                            score += 2
+                    for word in k["category"].split():
+                        if len(word) >= 2 and word in msg_lower:
+                            score += 1
+                    if score > 0:
+                        scored.append((score, k))
+                scored.sort(key=lambda x: x[0], reverse=True)
+                relevant = [k for _, k in scored[:3]]
                 if relevant:
                     snippets = "\n".join([f"- [{r['topic']}] {r['content']}" for r in relevant])
                     system_prompt += f"\n\n## 相关心理学参考（自然融入，不要直接引用）\n{snippets}"
