@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from lib import db  # noqa: E402
 from lib.cors import send_cors_headers  # noqa: E402
-from lib.qwen import call_qwen, get_embedding  # noqa: E402
+from lib.qwen import call_qwen  # noqa: E402
 
 SYSTEM_PROMPT = """你是一个温暖的朋友，恰好很懂心理学。
 
@@ -200,14 +200,22 @@ class handler(BaseHTTPRequestHandler):
 
         # RAG: Retrieve relevant psychology knowledge
         try:
-            query_embedding = get_embedding(user_message)
-            if query_embedding:
-                db_client = db.admin_client()
-                results = db_client.rpc("search_knowledge", {
-                    "query_embedding": query_embedding,
-                    "match_count": 3,
-                }).execute()
-                relevant = [r for r in (results.data or []) if r.get("similarity", 0) > 0.3]
+            db_client = db.admin_client()
+            all_knowledge = db_client.table("knowledge_base").select("id, topic, category, content").execute()
+            if all_knowledge.data:
+                # Build topic index for Qwen to select from
+                topic_list = "\n".join([f"{k['id']}|{k['category']}|{k['topic']}" for k in all_knowledge.data])
+                select_prompt = f"根据用户的消息，从以下心理学主题中选出最相关的3个（只返回ID，逗号分隔）：\n{topic_list}"
+                selected = call_qwen(
+                    messages=[
+                        {"role": "system", "content": "你是一个知识检索助手。根据用户消息选出最相关的主题ID。只返回ID，逗号分隔，不要其他文字。"},
+                        {"role": "user", "content": f"{select_prompt}\n\n用户消息：{user_message}"}
+                    ],
+                    temperature=0.1,
+                    max_tokens=100
+                )
+                selected_ids = [s.strip() for s in selected.split(",") if s.strip()]
+                relevant = [k for k in all_knowledge.data if k["id"] in selected_ids]
                 if relevant:
                     snippets = "\n".join([f"- [{r['topic']}] {r['content']}" for r in relevant])
                     system_prompt += f"\n\n## 相关心理学参考（自然融入，不要直接引用）\n{snippets}"

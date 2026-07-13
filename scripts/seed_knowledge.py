@@ -1,15 +1,12 @@
-"""Seed psychology knowledge base into Supabase with embeddings.
+"""Seed psychology knowledge base into Supabase.
 
 Usage: export $(grep -v '^#' .env.vercel | xargs) && python3 scripts/seed_knowledge.py
 """
-import json
 import os
 import sys
-import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from lib import db
-from lib.qwen import get_embedding
 
 KNOWLEDGE = [
     # === 焦虑与压力 ===
@@ -118,33 +115,26 @@ def seed():
         print("Cleared existing knowledge_base data")
     except Exception as e:
         print(f"Warning: Could not clear table: {e}")
+        print("Make sure to run the migration SQL first!")
+        return
 
     total = len(KNOWLEDGE)
+    success = 0
     for i, item in enumerate(KNOWLEDGE):
-        text = f"{item['topic']}：{item['content']}"
-        print(f"[{i+1}/{total}] Embedding: {item['topic']}...")
+        print(f"[{i+1}/{total}] Inserting: {item['topic']}...")
 
         try:
-            embedding = get_embedding(text)
-            if not embedding:
-                print(f"  ⚠ No embedding returned, skipping")
-                continue
-
             client.table("knowledge_base").insert({
                 "category": item["category"],
                 "topic": item["topic"],
                 "content": item["content"],
-                "embedding": embedding,
             }).execute()
-            print(f"  ✓ Inserted ({len(embedding)} dimensions)")
-
+            success += 1
+            print(f"  ✓ Inserted")
         except Exception as e:
             print(f"  ✗ Error: {e}")
 
-        # Rate limiting
-        time.sleep(0.2)
-
-    print(f"\nDone! Seeded {total} knowledge items.")
+    print(f"\nDone! Seeded {success}/{total} knowledge items.")
 
 
 if __name__ == "__main__":
