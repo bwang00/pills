@@ -74,33 +74,33 @@ export default function AIChatPage() {
   }
 
   const handleNewConversation = async () => {
-    // Extract tags and profile for current conversation before creating new one
-    if (conversationId && messages.length > 1) {
-      try {
-        await fetch(`/api/conversations/extract-tags?conversation_id=${conversationId}`, { method: 'POST' });
-        await fetch(`/api/conversations/extract-profile?conversation_id=${conversationId}&username=${encodeURIComponent(username)}`, { method: 'POST' });
-      } catch (e) {
-        console.error('Failed to extract tags/profile:', e);
-      }
-    }
+    // Reset UI immediately so the button feels responsive
+    const prevConvId = conversationId;
+    const prevMessages = messages;
     setConversationId(null);
     setMessages([
       { role: 'assistant', content: '嘿，最近怎么样？想聊点什么吗？' },
     ]);
     setShowSidebar(false);
-  };
 
-  const handleSelectConversation = async (id: string) => {
-    // Extract tags and profile for current conversation before loading new one
-    if (conversationId && messages.length > 1) {
+    // Fire-and-forget background extraction
+    if (prevConvId && prevMessages.length > 1) {
       try {
-        await fetch(`/api/conversations/extract-tags?conversation_id=${conversationId}`, { method: 'POST' });
-        await fetch(`/api/conversations/extract-profile?conversation_id=${conversationId}&username=${encodeURIComponent(username)}`, { method: 'POST' });
+        await fetch(`/api/conversations/extract-tags?conversation_id=${prevConvId}`, { method: 'POST' });
+        await fetch(`/api/conversations/extract-profile?conversation_id=${prevConvId}&username=${encodeURIComponent(username)}`, { method: 'POST' });
       } catch (e) {
         console.error('Failed to extract tags/profile:', e);
       }
     }
-    
+  };
+
+  const handleSelectConversation = async (id: string) => {
+    // Save previous conversation info for background extraction
+    const prevConvId = conversationId;
+    const prevMessages = messages;
+    setShowSidebar(false);
+
+    // Load new conversation immediately
     try {
       const response = await fetch(`/api/conversations/${id}`);
       const data = await response.json();
@@ -109,7 +109,16 @@ export default function AIChatPage() {
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
-    setShowSidebar(false);
+
+    // Fire-and-forget background extraction for previous conversation
+    if (prevConvId && prevConvId !== id && prevMessages.length > 1) {
+      try {
+        await fetch(`/api/conversations/extract-tags?conversation_id=${prevConvId}`, { method: 'POST' });
+        await fetch(`/api/conversations/extract-profile?conversation_id=${prevConvId}&username=${encodeURIComponent(username)}`, { method: 'POST' });
+      } catch (e) {
+        console.error('Failed to extract tags/profile:', e);
+      }
+    }
   };
 
   const sendMessage = async () => {
